@@ -1,17 +1,20 @@
 package com.sdftdusername.saturn.entities;
 
-import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.Array;
 import com.sdftdusername.saturn.SaturnMod;
+import com.sdftdusername.saturn.Utils;
+import com.sdftdusername.saturn.commands.CommandSave;
+import com.sdftdusername.saturn.commands.CommandStart;
 import com.sdftdusername.saturn.mixins.EntityGetSightRange;
 import com.sdftdusername.saturn.mixins.EntityModelInstanceGetBoneMap;
-import com.sdftdusername.saturn.mixins.ItemEntityGetItemStack;
+import com.sdftdusername.saturn.pathfinding.Pathfinding;
+import com.sdftdusername.saturn.pathfinding.Tile;
 import de.pottgames.tuningfork.SoundBuffer;
 import finalforeach.cosmicreach.GameAssetLoader;
 import finalforeach.cosmicreach.GameSingletons;
 import finalforeach.cosmicreach.Threads;
-import finalforeach.cosmicreach.audio.SoundManager;
+import finalforeach.cosmicreach.blocks.Block;
 import finalforeach.cosmicreach.chat.Chat;
 import finalforeach.cosmicreach.entities.Entity;
 import finalforeach.cosmicreach.entities.ItemEntity;
@@ -22,10 +25,13 @@ import finalforeach.cosmicreach.items.ItemStack;
 import finalforeach.cosmicreach.rendering.entities.EntityModel;
 import finalforeach.cosmicreach.rendering.entities.EntityModelInstance;
 import finalforeach.cosmicreach.savelib.crbin.CRBSerialized;
+import finalforeach.cosmicreach.world.Chunk;
 import finalforeach.cosmicreach.world.Zone;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class SaturnEntity extends Entity {
     public static final String ENTITY_TYPE_ID = "base:saturn_guy";
@@ -47,6 +53,11 @@ public class SaturnEntity extends Entity {
     public int talkOverState = 0;
 
     public Object bodyBone = null;
+
+    public List<Vector3> walkQueue = new ArrayList<>();
+
+    @CRBSerialized
+    public float targetRotationY = 0;
 
     @CRBSerialized
     public float bodyRotationY = 0;
@@ -81,7 +92,7 @@ public class SaturnEntity extends Entity {
     }
 
     public void move(float multiply) {
-        double yaw = Math.toRadians(bodyRotationY);
+        double yaw = Math.toRadians(targetRotationY);
         Vector3 forward = new Vector3(
                 (float)Math.sin(yaw),
                 0,
@@ -158,12 +169,121 @@ public class SaturnEntity extends Entity {
         return (a + diff * t + 360) % 360;
     }
 
+    public void startPathfinding(Zone zone, Vector3 goal) {
+        Vector3 startBlock = new Vector3(position);
+        startBlock.x = (float)Math.floor(startBlock.x);
+        startBlock.y = (float)Math.floor(startBlock.y);
+        startBlock.z = (float)Math.floor(startBlock.z);
+
+        Vector3 goalBlock = new Vector3(goal);
+        goalBlock.x = (float)Math.floor(goalBlock.x);
+        goalBlock.y = (float)Math.floor(goalBlock.y);
+        goalBlock.z = (float)Math.floor(goalBlock.z);
+
+        Chunk startChunk = zone.getChunkAtPosition(startBlock);
+        Chunk goalChunk = zone.getChunkAtPosition(goalBlock);
+
+        boolean sameChunk = startChunk.chunkX == goalChunk.chunkX &&
+                startChunk.chunkY == goalChunk.chunkY &&
+                startChunk.chunkZ == goalChunk.chunkZ;
+
+        if (!sameChunk) {
+            sendMessage(zone, "Start and goal position isn't in the same chunk");
+            return;
+        }
+
+        if (goalBlock.y != startBlock.y) {
+            sendMessage(zone, "Goal Y isn't the same as start Y");
+            return;
+        }
+
+        Vector3 localStartBlock = new Vector3(startBlock);
+        localStartBlock.x = Math.floorMod((int)localStartBlock.x, 16);
+        localStartBlock.y = Math.floorMod((int)localStartBlock.y, 16);
+        localStartBlock.z = Math.floorMod((int)localStartBlock.z, 16);
+
+        Vector3 localGoalBlock = new Vector3(goalBlock);
+        localGoalBlock.x = Math.floorMod((int)localGoalBlock.x, 16);
+        localGoalBlock.y = Math.floorMod((int)localGoalBlock.y, 16);
+        localGoalBlock.z = Math.floorMod((int)localGoalBlock.z, 16);
+
+        Tile[][] map = Utils.mapFromChunk(startChunk, (int)localStartBlock.y);
+
+        int[] startPos = new int[] {(int)localStartBlock.x, (int)localStartBlock.z};
+        int[] endPos = new int[] {(int)localGoalBlock.x, (int)localGoalBlock.z};
+
+        Pathfinding pathfinding = new Pathfinding();
+        List<Tile> route = pathfinding.getRoute(map, startPos, endPos);
+        sendMessage(zone, "Computing route...");
+
+        if (route.isEmpty()) {
+            sendMessage(zone, "Route is empty");
+            return;
+        }
+
+        sendMessage(zone, "Found a route!");
+
+        for (int i = 1; i < route.size(); ++i) {
+            Tile tile = route.get(route.size() - i - 1);
+            Vector3 worldPosition = new Vector3(
+                    tile.getX() + startChunk.getBlockX(),
+                    startBlock.y,
+                    tile.getY() + startChunk.getBlockZ()
+            );
+            walkQueue.add(worldPosition);
+
+            Block block = Block.STONE_BASALT;
+            if (i == 1)
+                block = Block.GRASS;
+            else if (i == route.size() - 1)
+                block = Block.SAND;
+
+            ItemStack itemStack = new ItemStack(block.getDefaultBlockState().getItem(), 1);
+
+            ItemEntity itemEntity = itemStack.spawnItemEntityAt(zone, worldPosition.add(0.5f, 0, 0.5f));
+            itemEntity.minPickupAge = 5.0F;
+        }
+    }
+
     @Override
     public void update(Zone zone, double deltaTime) {
         if (bodyBone == null) {
             EntityModelInstance entityModelInstance = ((EntityModel) model).getModelInstance(this);
             HashMap boneMap = ((EntityModelInstanceGetBoneMap) entityModelInstance).getBoneMap();
             bodyBone = boneMap.get("body");
+        }
+
+        headRotationY = 0;
+        headRotationX = 90;
+
+        //bodyRotationY = 0;
+
+        if (CommandStart.positionInQueue) {
+            CommandStart.positionInQueue = false;
+            CommandStart.busy = true;
+            sendMessage(zone, "Started pathfinding");
+            startPathfinding(zone, CommandStart.queuePosition);
+            CommandStart.busy = false;
+        }
+
+        if (!walkQueue.isEmpty()) {
+            Vector3 nextPosition = walkQueue.get(0);
+            targetRotationY = -lookAt(position.x, position.z, nextPosition.x, nextPosition.z) + 90;
+            bodyRotationY = lerpRotation(bodyRotationY, targetRotationY, (float)deltaTime * 2.5f);
+
+            move(1);
+            playAnimation("follow");
+
+            Vector2 position2D = new Vector2(position.x, position.z);
+            Vector2 nextPosition2D = new Vector2(nextPosition.x, nextPosition.z);
+
+            float distance = position2D.dst(nextPosition2D);
+            if (distance < 0.25f) {
+                walkQueue.remove(0);
+            }
+        } else {
+            stopMoving();
+            playAnimation("idle");
         }
 
         wrapRotation();
