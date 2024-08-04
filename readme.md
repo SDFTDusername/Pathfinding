@@ -1,4 +1,4 @@
-This mod uses code from [Qualia91/AStarAlg](https://github.com/Qualia91/AStarAlg) for the A* search algorithm.
+This mod uses modified code of [Qualia91/AStarAlg](https://github.com/Qualia91/AStarAlg) for the A* search algorithm.
 
 # Cosmic Quilt Example Mod
 > The example mod for the [Cosmic Quilt](https://codeberg.org/CRModders/cosmic-quilt) Loader
