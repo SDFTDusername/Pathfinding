@@ -31,15 +31,15 @@ public class Pathfinding {
             do {
                 if (queue.isEmpty()) break;
                 currentTile = queue.remove();
-            } while (!currentTile.isOpen());
+            } while (!currentTile.open);
 
-            currentTile.setOpen(false);
+            currentTile.open = false;
 
-            int currentX = currentTile.getRowNumber();
-            int currentY = currentTile.getColNumber();
-            int currentScore = currentTile.getScore();
+            int currentX = currentTile.x;
+            int currentY = currentTile.y;
+            int currentScore = currentTile.score;
 
-            if (currentTile.getRowNumber() == endPosition[0] && currentTile.getColNumber() == endPosition[1]) {
+            if (currentTile.x == endPosition[0] && currentTile.y == endPosition[1]) {
                 // at the end, return path
                 routeAvailable = true;
                 break;
@@ -56,9 +56,9 @@ public class Pathfinding {
                         smallestScore = score;
                     }
                     Tile thisTile = tiles[nextX][currentY];
-                    thisTile.setScore(score);
+                    thisTile.score = score;
                     queue.add(thisTile);
-                    thisTile.setParent(currentTile);
+                    thisTile.parent = currentTile;
                 }
             }
 
@@ -71,13 +71,11 @@ public class Pathfinding {
                         smallestScore = score;
                     }
                     Tile thisTile = tiles[currentX][nextY];
-                    thisTile.setScore(score);
+                    thisTile.score = score;
                     queue.add(thisTile);
-                    thisTile.setParent(currentTile);
+                    thisTile.parent = currentTile;
                 }
             }
-
-
         }
 
         // get List of tiles using current tile
@@ -88,44 +86,45 @@ public class Pathfinding {
 
     private void resetAllTiles() {
         for (Tile[] tile : tiles) {
-            for (int col = 0; col < tiles[0].length; col++) {
-                tile[col].setOpen(true);
-                tile[col].setParent(null);
-                tile[col].setScore(0);
-
+            for (int col = 0; col < tiles[0].length; ++col) {
+                tile[col].open = true;
+                tile[col].parent = null;
+                tile[col].score = 0;
             }
         }
     }
 
     private List<Tile> getPath(Tile currentTile) {
         List<Tile> path = new ArrayList<>();
+
         while (currentTile != null) {
             path.add(currentTile);
-            currentTile = currentTile.getParent();
+            currentTile = currentTile.parent;
         }
+
         return path;
     }
 
     private int distanceScoreAway(Tile currentTile) {
-        return Math.abs(endPosition[0] - currentTile.getColNumber()) + Math.abs(endPosition[1] - currentTile.getRowNumber());
+        return Math.abs(endPosition[0] - currentTile.y) + Math.abs(endPosition[1] - currentTile.x);
     }
 
     private int getScoreOfTile(Tile tile, int currentScore) {
         int guessScoreLeft = distanceScoreAway(tile);
+
         int extraMovementCost = 0;
-        if (tile.getTileType() == TileType.CYAN) {
-            extraMovementCost+=1000;
-        }
+        if (tile.walkThrough)
+            extraMovementCost = 1000;
+
         int movementScore = currentScore + 1;
         return guessScoreLeft + movementScore + extraMovementCost;
     }
 
     private boolean validTile(int nextX, int nextY) {
-        if (nextX >= 0 && nextX < maxWidth) {
-            if (nextY >= 0 && nextY < maxHeight) {
-                return tiles[nextX][nextY].isOpen() && tiles[nextX][nextY].getTileType() != TileType.BLUE;
-            }
-        }
+        if (nextX >= 0 && nextX < maxWidth)
+            if (nextY >= 0 && nextY < maxHeight)
+                return tiles[nextX][nextY].open && tiles[nextX][nextY].walkThrough;
+
         return false;
     }
 }

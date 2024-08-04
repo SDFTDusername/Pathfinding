@@ -2,9 +2,7 @@ package com.sdftdusername.saturn;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
-import com.sdftdusername.saturn.entities.SaturnEntity;
 import com.sdftdusername.saturn.pathfinding.Tile;
-import com.sdftdusername.saturn.pathfinding.TileType;
 import finalforeach.cosmicreach.blocks.BlockState;
 import finalforeach.cosmicreach.world.Chunk;
 import finalforeach.cosmicreach.world.Zone;
@@ -36,11 +34,7 @@ public class Utils {
         for (int x = 0; x < 16; ++x) {
             for (int z = 0; z < 16; ++z) {
                 BlockState blockState = chunk.getBlockState(x, localY, z);
-
-                TileType tileType = blockState.walkThrough ? TileType.CYAN : TileType.BLUE;
-                Tile tile = new Tile(tileType, x, z, 1, 1);
-                tile.setOpen(blockState.walkThrough);
-                map[x][z] = tile;
+                map[x][z] = new Tile(blockState.walkThrough, x, z);
             }
         }
 

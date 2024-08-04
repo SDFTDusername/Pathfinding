@@ -226,9 +226,9 @@ public class SaturnEntity extends Entity {
         for (int i = 1; i < route.size(); ++i) {
             Tile tile = route.get(route.size() - i - 1);
             Vector3 worldPosition = new Vector3(
-                    tile.getX() + startChunk.getBlockX(),
+                    tile.x + startChunk.getBlockX(),
                     startBlock.y,
-                    tile.getY() + startChunk.getBlockZ()
+                    tile.y + startChunk.getBlockZ()
             );
             walkQueue.add(worldPosition);
 
@@ -267,19 +267,26 @@ public class SaturnEntity extends Entity {
         }
 
         if (!walkQueue.isEmpty()) {
-            Vector3 nextPosition = walkQueue.get(0);
-            targetRotationY = -lookAt(position.x, position.z, nextPosition.x, nextPosition.z) + 90;
-            bodyRotationY = lerpRotation(bodyRotationY, targetRotationY, (float)deltaTime * 2.5f);
+            Vector3 currentPosition = walkQueue.get(0);
+            targetRotationY = -lookAt(position.x, position.z, currentPosition.x, currentPosition.z) + 90;
+
+            if (walkQueue.size() > 1) {
+                Vector3 nextPosition = walkQueue.get(1);
+                float nextTargetRotationY = -lookAt(position.x, position.z, nextPosition.x, nextPosition.z) + 90;
+                bodyRotationY = lerpRotation(bodyRotationY, nextTargetRotationY, (float)deltaTime * 5f);
+            }
 
             move(1);
             playAnimation("follow");
 
             Vector2 position2D = new Vector2(position.x, position.z);
-            Vector2 nextPosition2D = new Vector2(nextPosition.x, nextPosition.z);
+            Vector2 nextPosition2D = new Vector2(currentPosition.x, currentPosition.z);
 
             float distance = position2D.dst(nextPosition2D);
             if (distance < 0.25f) {
                 walkQueue.remove(0);
+                if (walkQueue.isEmpty())
+                    sendMessage(zone, "Done!");
             }
         } else {
             stopMoving();
