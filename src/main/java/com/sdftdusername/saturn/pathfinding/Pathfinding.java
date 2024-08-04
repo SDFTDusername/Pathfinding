@@ -58,6 +58,7 @@ public class Pathfinding {
                     }
                     Tile thisTile = tiles[nextX][currentY][currentZ];
                     thisTile.score = score;
+                    thisTile.jump = false;
                     queue.add(thisTile);
                     thisTile.parent = currentTile;
                 }
@@ -97,6 +98,7 @@ public class Pathfinding {
                     }
                     Tile thisTile = tiles[currentX][currentY][nextZ];
                     thisTile.score = score;
+                    thisTile.jump = false;
                     queue.add(thisTile);
                     thisTile.parent = currentTile;
                 }
