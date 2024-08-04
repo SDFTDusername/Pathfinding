@@ -1,16 +1,14 @@
 package com.sdftdusername.saturn.entities;
 
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.PauseableThread;
 import com.sdftdusername.saturn.SaturnMod;
 import com.sdftdusername.saturn.Utils;
-import com.sdftdusername.saturn.commands.CommandSave;
 import com.sdftdusername.saturn.commands.CommandStart;
 import com.sdftdusername.saturn.mixins.EntityGetSightRange;
 import com.sdftdusername.saturn.mixins.EntityModelInstanceGetBoneMap;
 import com.sdftdusername.saturn.pathfinding.Pathfinding;
 import com.sdftdusername.saturn.pathfinding.Tile;
+import com.sdftdusername.saturn.pathfinding.Waypoint;
 import de.pottgames.tuningfork.SoundBuffer;
 import finalforeach.cosmicreach.GameAssetLoader;
 import finalforeach.cosmicreach.GameSingletons;
@@ -20,8 +18,6 @@ import finalforeach.cosmicreach.chat.Chat;
 import finalforeach.cosmicreach.entities.Entity;
 import finalforeach.cosmicreach.entities.ItemEntity;
 import finalforeach.cosmicreach.entities.Player;
-import finalforeach.cosmicreach.items.Item;
-import finalforeach.cosmicreach.items.ItemBlock;
 import finalforeach.cosmicreach.items.ItemStack;
 import finalforeach.cosmicreach.rendering.entities.EntityModel;
 import finalforeach.cosmicreach.rendering.entities.EntityModelInstance;
@@ -55,7 +51,7 @@ public class SaturnEntity extends Entity {
 
     public Object bodyBone = null;
 
-    public List<Vector3> walkQueue = new ArrayList<>();
+    public List<Waypoint> waypoints = new ArrayList<>();
     public boolean busy = false;
 
     @CRBSerialized
@@ -194,11 +190,6 @@ public class SaturnEntity extends Entity {
             return;
         }
 
-        if (goalBlock.y != startBlock.y) {
-            sendMessage(zone, "Goal Y isn't the same as start Y");
-            return;
-        }
-
         Vector3 localStartBlock = new Vector3(startBlock);
         localStartBlock.x = Math.floorMod((int)localStartBlock.x, 16);
         localStartBlock.y = Math.floorMod((int)localStartBlock.y, 16);
@@ -209,10 +200,10 @@ public class SaturnEntity extends Entity {
         localGoalBlock.y = Math.floorMod((int)localGoalBlock.y, 16);
         localGoalBlock.z = Math.floorMod((int)localGoalBlock.z, 16);
 
-        Tile[][] map = Utils.mapFromChunk(startChunk, (int)localStartBlock.y);
+        Tile[][][] map = Utils.mapFromChunk(startChunk);
 
-        int[] startPos = new int[] {(int)localStartBlock.x, (int)localStartBlock.z};
-        int[] endPos = new int[] {(int)localGoalBlock.x, (int)localGoalBlock.z};
+        int[] startPos = new int[] {(int)localStartBlock.x, (int)localStartBlock.y, (int)localStartBlock.z};
+        int[] endPos = new int[] {(int)localGoalBlock.x, (int)localGoalBlock.y, (int)localGoalBlock.z};
 
         Pathfinding pathfinding = new Pathfinding();
         List<Tile> route = pathfinding.getRoute(map, startPos, endPos);
@@ -228,22 +219,27 @@ public class SaturnEntity extends Entity {
         for (int i = 1; i < route.size(); ++i) {
             Tile tile = route.get(route.size() - i - 1);
             Vector3 worldPosition = new Vector3(
-                    tile.x + startChunk.getBlockX(),
-                    startBlock.y,
-                    tile.y + startChunk.getBlockZ()
+                    tile.x + startChunk.getBlockX() + 0.5f,
+                    tile.y + startChunk.getBlockY(),
+                    tile.z + startChunk.getBlockZ() + 0.5f
             );
-            walkQueue.add(worldPosition);
+
+            waypoints.add(new Waypoint(worldPosition, tile.jump));
 
             Block block = Block.STONE_BASALT;
             if (i == 1)
                 block = Block.GRASS;
             else if (i == route.size() - 1)
                 block = Block.SAND;
+            else if (tile.jump)
+                block = Block.CRATE_WOOD;
 
             ItemStack itemStack = new ItemStack(block.getDefaultBlockState().getItem(), 1);
 
-            ItemEntity itemEntity = itemStack.spawnItemEntityAt(zone, worldPosition.add(0.5f, 0, 0.5f));
+            ItemEntity itemEntity = new ItemEntity(itemStack);
+            itemEntity.setPosition(worldPosition);
             itemEntity.minPickupAge = 5.0F;
+            zone.addEntity(itemEntity);
         }
     }
 
@@ -275,26 +271,32 @@ public class SaturnEntity extends Entity {
             thread.start();
         }
 
-        if (!walkQueue.isEmpty() && !busy) {
-            Vector3 currentPosition = walkQueue.get(0);
+        if (!waypoints.isEmpty() && !busy) {
+            Waypoint waypoint = waypoints.get(0);
+
+            Vector3 currentPosition = waypoint.position;
             targetRotationY = -lookAt(position.x, position.z, currentPosition.x, currentPosition.z) + 90;
 
-            if (walkQueue.size() > 1) {
-                Vector3 nextPosition = walkQueue.get(1);
+            if (waypoints.size() > 1) {
+                Vector3 nextPosition = waypoints.get(1).position;
                 float nextTargetRotationY = -lookAt(position.x, position.z, nextPosition.x, nextPosition.z) + 90;
                 bodyRotationY = lerpRotation(bodyRotationY, nextTargetRotationY, (float)deltaTime * 5f);
+            }
+
+            if (waypoint.jump && isOnGround) {
+                isOnGround = false;
+                velocity.add(0, 10, 0);
             }
 
             move(1);
             playAnimation("follow");
 
-            Vector2 position2D = new Vector2(position.x, position.z);
-            Vector2 nextPosition2D = new Vector2(currentPosition.x, currentPosition.z);
+            Vector3 checkPosition = new Vector3(position);
 
-            float distance = position2D.dst(nextPosition2D);
+            float distance = checkPosition.dst(currentPosition);
             if (distance < 0.25f) {
-                walkQueue.remove(0);
-                if (walkQueue.isEmpty())
+                waypoints.remove(0);
+                if (waypoints.isEmpty())
                     sendMessage(zone, "Done!");
             }
         } else {

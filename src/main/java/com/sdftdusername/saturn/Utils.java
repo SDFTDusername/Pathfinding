@@ -28,13 +28,15 @@ public class Utils {
         return null;
     }
 
-    public static Tile[][] mapFromChunk(Chunk chunk, int localY) {
-        Tile[][] map = new Tile[16][16];
+    public static Tile[][][] mapFromChunk(Chunk chunk) {
+        Tile[][][] map = new Tile[16][16][16];
 
         for (int x = 0; x < 16; ++x) {
-            for (int z = 0; z < 16; ++z) {
-                BlockState blockState = chunk.getBlockState(x, localY, z);
-                map[x][z] = new Tile(blockState.walkThrough, x, z);
+            for (int y = 0; y < 16; ++y) {
+                for (int z = 0; z < 16; ++z) {
+                    BlockState blockState = chunk.getBlockState(x, y, z);
+                    map[x][y][z] = new Tile(blockState.walkThrough, x, y, z);
+                }
             }
         }
 
