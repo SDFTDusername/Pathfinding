@@ -73,29 +73,14 @@ public class SaturnEntity extends Entity {
         currentAnimation = name;
     }
 
-    public void talk(Zone zone, Player player, SoundBuffer[] sounds, String[] messages) {
-        if (isTalking)
-            return;
-
-        isTalking = true;
-        nextTalk = MathUtils.random(5f, 8f);
-
-        playAnimation("start_talking");
-
-        int index = MathUtils.random(0, sounds.length - 1);
-        SoundManager.INSTANCE.playSound3D(sounds[index], position);
-
-        if (player != null)
-            Chat.MAIN_CHAT.sendMessage(zone.getWorld(), player, null, "Saturn> " + messages[index]);
-
-        talkOver = sounds[index].getDuration();
-        playTalk = 0.5d;
-
-        talkOverState = 0;
+    public void sendMessage(Zone zone, String message) {
+        for (int i = 0; i < zone.players.size; ++i) {
+            Player player = zone.players.get(i);
+            Chat.MAIN_CHAT.sendMessage(zone.getWorld(), player, null, message);
+        }
     }
 
-    public void moveToPosition(Vector3 position, float multiply) {
-
+    public void move(float multiply) {
         double yaw = Math.toRadians(bodyRotationY);
         Vector3 forward = new Vector3(
                 (float)Math.sin(yaw),
@@ -120,7 +105,7 @@ public class SaturnEntity extends Entity {
         localBoundingBox.update();
         getBoundingBox(this.globalBoundingBox);
 
-        //viewPositionOffset = new Vector3(0, 1.75f, 0);
+        viewPositionOffset = new Vector3(0, 1.75f, 0);
 
         Threads.runOnMainThread(
                 () -> this.model = GameSingletons.entityModelLoader
@@ -128,50 +113,35 @@ public class SaturnEntity extends Entity {
         );
 
         currentAnimation = "idle";
-
-        nextTalk = MathUtils.random(5f, 8f);
     }
 
-    @Override
-    public void hit(float amount) {
-        super.hit(amount);
-    }
-
-    @Override
-    protected void onDeath(Zone zone) {
-        super.onDeath(zone);
-    }
-
-    public boolean setBodyRotation(Vector3 rotation) {
-        boolean worked = false;
-
+    public void setBodyRotation(Vector3 rotation) {
         if (bodyBone != null) {
-            worked = true;
-
             try {
                 Class myClass = bodyBone.getClass();
                 Field rotationField = myClass.getField("rotation");
                 rotationField.set(bodyBone, rotation);
-                worked = true;
             } catch (Exception e) {
                 SaturnMod.LOGGER.error(e.getMessage());
-                worked = false;
             }
         }
-
-        return worked;
     }
 
-    public void wrap() {
-        while (bodyRotationY > 180)
-            bodyRotationY -= 360;
-        while (bodyRotationY < -180)
-            bodyRotationY += 360;
-
+    public void wrapRotation() {
         while (headRotationX > 180)
             headRotationX -= 360;
         while (headRotationX < -180)
             headRotationX += 360;
+
+        while (headRotationY > 180)
+            headRotationY -= 360;
+        while (headRotationY < -180)
+            headRotationY += 360;
+
+        while (bodyRotationY > 180)
+            bodyRotationY -= 360;
+        while (bodyRotationY < -180)
+            bodyRotationY += 360;
     }
 
     public float shortestAngleDifference(float a, float b) {
@@ -191,126 +161,15 @@ public class SaturnEntity extends Entity {
     @Override
     public void update(Zone zone, double deltaTime) {
         if (bodyBone == null) {
-            EntityModelInstance entityModelInstance = ((EntityModel)model).getModelInstance(this);
-            HashMap boneMap = ((EntityModelInstanceGetBoneMap)entityModelInstance).getBoneMap();
+            EntityModelInstance entityModelInstance = ((EntityModel) model).getModelInstance(this);
+            HashMap boneMap = ((EntityModelInstanceGetBoneMap) entityModelInstance).getBoneMap();
             bodyBone = boneMap.get("body");
         }
 
-        boolean canTalk = false;
-
-        Player closestPlayer = getClosestPlayerToEntity(zone);
-        if (closestPlayer != null) {
-            Entity closestPlayerEntity = closestPlayer.getEntity();
-
-            float[] headRotation = lookAt(
-                    position.x,
-                    position.y,
-                    position.z,
-                    closestPlayerEntity.position.x,
-                    closestPlayerEntity.position.y,
-                    closestPlayerEntity.position.z
-            );
-
-            headRotationX -= bodyRotationY;
-
-            headRotationX = lerpRotation(headRotationX, headRotation[0], (float)deltaTime * 5f);
-            headRotationY = lerpRotation(headRotationY, headRotation[1], (float)deltaTime * 5f);
-
-            bodyRotationY = lerpRotation(bodyRotationY, -headRotationX + 90, (float) deltaTime * 2.5f);
-
-            headRotationX += bodyRotationY;
-
-            wrap();
-
-            float distance = closestPlayerEntity.position.dst(position);
-
-            if (!isTalking) {
-                if (distance > 2.5f && !gotLog) {
-                    // Move to player
-                    playAnimation("follow");
-                    moveToPosition(closestPlayerEntity.position, 1);
-                    if (closestPlayerEntity.position.y - position.y > 0.1 && isOnGround) {
-                        isOnGround = false;
-                        velocity.add(0.0F, 10.0F, 0.0F);
-                    }
-                } else if (distance < 1.5f) {
-                    // Back away from player
-                    playAnimation("back_away");
-                    moveToPosition(closestPlayerEntity.position, -1);
-                } else {
-                    // Stop moving
-                    playAnimation("idle");
-                    stopMoving();
-
-                    canTalk = true;
-                }
-            } else {
-                stopMoving();
-            }
-
-            if (!isTalking && !gotLog) {
-                nextTalk -= deltaTime;
-                if (nextTalk <= 0 && canTalk)
-                    talk(zone, closestPlayer, yearnSounds, yearnMessages);
-            }
-        }
-
-        if (isTalking) {
-            if (talkOver > 0)
-                talkOver -= deltaTime;
-
-            if (talkOver <= 0) {
-                if (talkOverState == 0) {
-                    playAnimation("end_talking");
-
-                    talkOverState = 1;
-                    talkOver = 0.5d;
-                } else {
-                    isTalking = false;
-                    playTalk = 0;
-                }
-            } else {
-                if (playTalk > 0)
-                    playTalk -= deltaTime;
-
-                if (playTalk <= 0 && talkOverState != 1)
-                    playAnimation("talk");
-            }
-        }
+        wrapRotation();
 
         setBodyRotation(new Vector3(0, bodyRotationY, 0));
         viewDirection = convertToDirectionVector(headRotationX, headRotationY);
-
-        try {
-            if (!gotLog && !isTalking) {
-                for (int i = 0; i < zone.allEntities.size; ++i) {
-                    Entity entity = zone.allEntities.get(i);
-                    if (entity instanceof ItemEntity) {
-                        ItemEntity itemEntity = (ItemEntity) entity;
-                        ItemStack itemStack = ((ItemEntityGetItemStack) itemEntity).getItemStack();
-
-                        float dist = position.dst(itemEntity.position);
-                        if (dist > 1)
-                            continue;
-
-                        Item item = itemStack.getItem();
-                        if (item instanceof ItemBlock) {
-                            ItemBlock itemBlock = (ItemBlock) item;
-
-                            if (itemBlock.getBlockState().getBlock().getStringId().equals("base:tree_log")) {
-                                //((ItemEntityGetItemStack) entity).die(zone);
-                                entity.hit(Float.MAX_VALUE);
-                                gotLog = true;
-                                talk(zone, closestPlayer, thankSounds, thankMessages);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            SaturnMod.LOGGER.error(e.getMessage());
-        }
 
         super.update(zone, deltaTime);
     }
@@ -364,22 +223,19 @@ public class SaturnEntity extends Entity {
     }
 
     public Player getClosestPlayerToEntity(Zone zone) {
-        Array<Player> players = zone.players;
         Player closest = null;
-        float closestDst = Float.MAX_VALUE;
-        float range = ((EntityGetSightRange)this).getSightRange();
+        float closestDistance = Float.MAX_VALUE;
 
-        for (Player p : players) {
-            Entity pe = p.getEntity();
-            if (pe != null) {
-                float dst = position.dst(pe.position);
-                if (!(dst > range)) {
-                    if (closest == null) {
-                        closest = p;
-                    } else if (closestDst > dst) {
-                        closestDst = dst;
-                        closest = p;
-                    }
+        float range = ((EntityGetSightRange)this).getSightRange();
+        for (int i = 0; i < zone.players.size; ++i) {
+            Player player = zone.players.get(i);
+            Entity entity = player.getEntity();
+
+            if (entity != null) {
+                float distance = position.dst(entity.position);
+                if (distance < closestDistance) {
+                    closest = player;
+                    closestDistance = distance;
                 }
             }
         }
@@ -391,9 +247,6 @@ public class SaturnEntity extends Entity {
         for (int i = 0; i < yearnSounds.length; ++i)
             yearnSounds[i] = GameAssetLoader.getSound("assets/sounds/entities/saturn/yearn/" + (i + 1) + ".ogg");
 
-        for (int i = 0; i < thankSounds.length; ++i)
-            thankSounds[i] = GameAssetLoader.getSound("assets/sounds/entities/saturn/thank/" + (i + 1) + ".ogg");
-
         yearnMessages[0] = "I need log.";
         yearnMessages[1] = "May I have a log?";
         yearnMessages[2] = "Log please!";
@@ -402,6 +255,9 @@ public class SaturnEntity extends Entity {
         yearnMessages[5] = "Give me log now!";
         yearnMessages[6] = "I am in need of a log.";
         yearnMessages[7] = "Give me log.";
+
+        for (int i = 0; i < thankSounds.length; ++i)
+            thankSounds[i] = GameAssetLoader.getSound("assets/sounds/entities/saturn/thank/" + (i + 1) + ".ogg");
 
         thankMessages[0] = "Thank you.";
         thankMessages[1] = "Thank you so much!";
