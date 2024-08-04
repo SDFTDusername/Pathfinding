@@ -2,6 +2,7 @@ package com.sdftdusername.saturn.entities;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.PauseableThread;
 import com.sdftdusername.saturn.SaturnMod;
 import com.sdftdusername.saturn.Utils;
 import com.sdftdusername.saturn.commands.CommandSave;
@@ -55,6 +56,7 @@ public class SaturnEntity extends Entity {
     public Object bodyBone = null;
 
     public List<Vector3> walkQueue = new ArrayList<>();
+    public boolean busy = false;
 
     @CRBSerialized
     public float targetRotationY = 0;
@@ -261,12 +263,19 @@ public class SaturnEntity extends Entity {
         if (CommandStart.positionInQueue) {
             CommandStart.positionInQueue = false;
             CommandStart.busy = true;
+            busy = true;
+
+            Thread thread = new Thread(() -> {
+                startPathfinding(zone, CommandStart.queuePosition);
+                CommandStart.busy = false;
+                busy = false;
+            });
+
             sendMessage(zone, "Started pathfinding");
-            startPathfinding(zone, CommandStart.queuePosition);
-            CommandStart.busy = false;
+            thread.start();
         }
 
-        if (!walkQueue.isEmpty()) {
+        if (!walkQueue.isEmpty() && !busy) {
             Vector3 currentPosition = walkQueue.get(0);
             targetRotationY = -lookAt(position.x, position.z, currentPosition.x, currentPosition.z) + 90;
 
