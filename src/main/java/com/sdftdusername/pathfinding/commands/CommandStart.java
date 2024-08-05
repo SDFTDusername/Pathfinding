@@ -11,6 +11,7 @@ public class CommandStart extends Command {
     public static boolean busy = false;
 
     public static boolean spawnWaypointItems = false;
+    public static boolean moveToWaypoints = false;
 
     @Override
     public void run(Chat chat, String[] args) {
@@ -21,10 +22,15 @@ public class CommandStart extends Command {
             return;
         }
 
-        if (args.length >= 1)
-            spawnWaypointItems = args[0].equalsIgnoreCase("true");
+        if (args.length >= 2)
+            spawnWaypointItems = args[1].equalsIgnoreCase("true");
         else
             spawnWaypointItems = false;
+
+        if (args.length >= 3)
+            moveToWaypoints = args[2].equalsIgnoreCase("true");
+        else
+            moveToWaypoints = true;
 
         queuePosition = ((CommandGetFields)this).getPlayer().getEntity().position;
         positionInQueue = true;

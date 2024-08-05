@@ -1,6 +1,5 @@
 package com.sdftdusername.pathfinding.pathfinding;
 
-import com.sdftdusername.pathfinding.PathfindingMod;
 import com.sdftdusername.pathfinding.Vector3i;
 import finalforeach.cosmicreach.world.Chunk;
 import finalforeach.cosmicreach.world.Zone;
@@ -38,8 +37,6 @@ public class Pathfinding {
             if (chunk != null) {
                 TileMap map = new TileMap(chunk);
                 tileMaps.put(tileMapPos, map);
-
-                PathfindingMod.LOGGER.info("Generated new TileMap at ({}, {}, {})", tileMapPos.x, tileMapPos.y, tileMapPos.z);
 
                 return map;
             }
@@ -161,6 +158,10 @@ public class Pathfinding {
                     queue.add(tile);
                     tile.parent = currentTile;
                 }
+            }
+
+            if (Thread.currentThread().isInterrupted()) {
+                return new ArrayList<>();
             }
         }
 

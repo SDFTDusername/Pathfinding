@@ -5,13 +5,11 @@ import com.badlogic.gdx.math.Vector3;
 import com.sdftdusername.pathfinding.PathfindingMod;
 import com.sdftdusername.pathfinding.Vector3i;
 import com.sdftdusername.pathfinding.commands.CommandStart;
-import com.sdftdusername.pathfinding.mixins.EntityGetSightRange;
+import com.sdftdusername.pathfinding.commands.CommandStop;
 import com.sdftdusername.pathfinding.mixins.EntityModelInstanceGetBoneMap;
 import com.sdftdusername.pathfinding.pathfinding.Pathfinding;
 import com.sdftdusername.pathfinding.pathfinding.Tile;
 import com.sdftdusername.pathfinding.pathfinding.Waypoint;
-import de.pottgames.tuningfork.SoundBuffer;
-import finalforeach.cosmicreach.GameAssetLoader;
 import finalforeach.cosmicreach.GameSingletons;
 import finalforeach.cosmicreach.Threads;
 import finalforeach.cosmicreach.blocks.Block;
@@ -35,8 +33,9 @@ public class PathfinderEntity extends Entity {
     public static final float SPEED = 3f;
 
     public String currentAnimation = "";
-
     public Object bodyBone = null;
+
+    public Thread pathfindingThread;
 
     public List<Waypoint> waypoints = new ArrayList<>();
     public boolean busy = false;
@@ -154,40 +153,46 @@ public class PathfinderEntity extends Entity {
     public void startPathfinding(Zone zone, Vector3 goal) {
         Pathfinding pathfinding = new Pathfinding();
         List<Tile> route = pathfinding.getRoute(zone, new Vector3i(position), new Vector3i(goal));
-        sendMessage(zone, "Computing route...");
 
-        if (route.isEmpty()) {
-            sendMessage(zone, "Route is empty");
-            return;
-        }
+        if (Thread.currentThread().isInterrupted())
+            sendMessage(zone, "Pathfinding has stopped");
+        else {
+            sendMessage(zone, "Computing route...");
 
-        sendMessage(zone, "Found a route!");
+            if (route.isEmpty()) {
+                sendMessage(zone, "Route is empty");
+                return;
+            }
 
-        for (int i = 1; i < route.size(); ++i) {
-            Tile tile = route.get(route.size() - i - 1);
-            Vector3 worldPosition = new Vector3(
-                    tile.x + 0.5f,
-                    tile.y,
-                    tile.z + 0.5f
-            );
+            sendMessage(zone, "Found a route!");
 
-            waypoints.add(new Waypoint(worldPosition, tile.jump));
+            for (int i = 1; i < route.size(); ++i) {
+                Tile tile = route.get(route.size() - i - 1);
+                Vector3 worldPosition = new Vector3(
+                        tile.x + 0.5f,
+                        tile.y,
+                        tile.z + 0.5f
+                );
 
-            if (CommandStart.spawnWaypointItems) {
-                Block block = Block.STONE_BASALT;
-                if (i == 1)
-                    block = Block.GRASS;
-                else if (i == route.size() - 1)
-                    block = Block.SAND;
-                else if (tile.jump)
-                    block = Block.CRATE_WOOD;
+                if (CommandStart.moveToWaypoints)
+                    waypoints.add(new Waypoint(worldPosition, tile.jump));
 
-                ItemStack itemStack = new ItemStack(block.getDefaultBlockState().getItem(), 1);
+                if (CommandStart.spawnWaypointItems) {
+                    Block block = Block.STONE_BASALT;
+                    if (i == 1)
+                        block = Block.GRASS;
+                    else if (i == route.size() - 1)
+                        block = Block.SAND;
+                    else if (tile.jump)
+                        block = Block.CRATE_WOOD;
 
-                ItemEntity itemEntity = new ItemEntity(itemStack);
-                itemEntity.setPosition(worldPosition);
-                itemEntity.minPickupAge = 5.0F;
-                zone.addEntity(itemEntity);
+                    ItemStack itemStack = new ItemStack(block.getDefaultBlockState().getItem(), 1);
+
+                    ItemEntity itemEntity = new ItemEntity(itemStack);
+                    itemEntity.setPosition(worldPosition);
+                    itemEntity.minPickupAge = 5.0F;
+                    zone.addEntity(itemEntity);
+                }
             }
         }
     }
@@ -203,19 +208,33 @@ public class PathfinderEntity extends Entity {
         headRotationY = 0;
         headRotationX = 90;
 
+        if (CommandStop.stop) {
+            if (busy) {
+                sendMessage(zone, "Stopping pathfinding");
+                pathfindingThread.interrupt();
+            } else if (!waypoints.isEmpty()) {
+                sendMessage(zone, "Stopping pathfinding");
+                waypoints.clear();
+            } else {
+                sendMessage(zone, "Nothing to stop");
+            }
+
+            CommandStop.stop = false;
+        }
+
         if (CommandStart.positionInQueue) {
             CommandStart.positionInQueue = false;
             CommandStart.busy = true;
             busy = true;
 
-            Thread thread = new Thread(() -> {
+            pathfindingThread = new Thread(() -> {
                 startPathfinding(zone, CommandStart.queuePosition);
                 CommandStart.busy = false;
                 busy = false;
             });
 
             sendMessage(zone, "Started pathfinding");
-            thread.start();
+            pathfindingThread.start();
         }
 
         if (!waypoints.isEmpty() && !busy) {
