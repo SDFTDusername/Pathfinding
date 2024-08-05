@@ -1,4 +1,4 @@
-package com.sdftdusername.saturn.mixins;
+package com.sdftdusername.pathfinding.mixins;
 
 import finalforeach.cosmicreach.rendering.entities.EntityModelInstance;
 import org.spongepowered.asm.mixin.Mixin;

@@ -1,19 +1,18 @@
-package com.sdftdusername.saturn;
+package com.sdftdusername.pathfinding;
 
 import dev.crmodders.cosmicquilt.api.entrypoint.ModInitializer;
 import org.quiltmc.loader.api.ModContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SaturnMod implements ModInitializer {
-	public static final Logger LOGGER = LoggerFactory.getLogger("Gep");
+public class PathfindingMod implements ModInitializer {
+	public static final Logger LOGGER = LoggerFactory.getLogger("Pathfinding");
 
 	@Override
 	public void onInitialize(ModContainer mod) {
-		LOGGER.info("Gep Initialized!");
+		LOGGER.info("Pathfinding Initialized!");
 		CommandsMod.RegisterCommands();
 		EntitiesMod.RegisterEntities();
-		MobSpawnerMod.RegisterMobs();
 	}
 }
 

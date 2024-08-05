@@ -1,15 +1,15 @@
-package com.sdftdusername.saturn.entities;
+package com.sdftdusername.pathfinding.entities;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.sdftdusername.saturn.SaturnMod;
-import com.sdftdusername.saturn.Vector3i;
-import com.sdftdusername.saturn.commands.CommandStart;
-import com.sdftdusername.saturn.mixins.EntityGetSightRange;
-import com.sdftdusername.saturn.mixins.EntityModelInstanceGetBoneMap;
-import com.sdftdusername.saturn.pathfinding.Pathfinding;
-import com.sdftdusername.saturn.pathfinding.Tile;
-import com.sdftdusername.saturn.pathfinding.Waypoint;
+import com.sdftdusername.pathfinding.PathfindingMod;
+import com.sdftdusername.pathfinding.Vector3i;
+import com.sdftdusername.pathfinding.commands.CommandStart;
+import com.sdftdusername.pathfinding.mixins.EntityGetSightRange;
+import com.sdftdusername.pathfinding.mixins.EntityModelInstanceGetBoneMap;
+import com.sdftdusername.pathfinding.pathfinding.Pathfinding;
+import com.sdftdusername.pathfinding.pathfinding.Tile;
+import com.sdftdusername.pathfinding.pathfinding.Waypoint;
 import de.pottgames.tuningfork.SoundBuffer;
 import finalforeach.cosmicreach.GameAssetLoader;
 import finalforeach.cosmicreach.GameSingletons;
@@ -30,24 +30,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class SaturnEntity extends Entity {
-    public static final String ENTITY_TYPE_ID = "base:saturn_guy";
+public class PathfinderEntity extends Entity {
+    public static final String ENTITY_TYPE_ID = "base:entity_pathfinder";
     public static final float SPEED = 3f;
 
-    public static SoundBuffer[] yearnSounds = new SoundBuffer[8];
-    public static SoundBuffer[] thankSounds = new SoundBuffer[8];
-
-    public static String[] yearnMessages = new String[8];
-    public static String[] thankMessages = new String[8];
-
     public String currentAnimation = "";
-
-    public double nextTalk = 0;
-    public boolean isTalking = false;
-
-    public double talkOver = 0;
-    public double playTalk = 0;
-    public int talkOverState = 0;
 
     public Object bodyBone = null;
 
@@ -66,19 +53,16 @@ public class SaturnEntity extends Entity {
     @CRBSerialized
     public float headRotationY = 0;
 
-    @CRBSerialized
-    public boolean gotLog = false;
-
     public void playAnimation(String name) {
         if (currentAnimation.equals(name))
             return;
 
         if (model == null) {
-            SaturnMod.LOGGER.error("model is null, can't play animation");
+            PathfindingMod.LOGGER.error("model is null, can't play animation");
             return;
         }
 
-        model.setCurrentAnimation(this, "animation.saturn." + name);
+        model.setCurrentAnimation(this, "animation.pathfinder." + name);
         currentAnimation = name;
     }
 
@@ -105,8 +89,8 @@ public class SaturnEntity extends Entity {
         onceVelocity.setZero();
     }
 
-    public SaturnEntity() {
-        super("base:entity_saturn");
+    public PathfinderEntity() {
+        super(ENTITY_TYPE_ID);
         canDespawn = false;
 
         localBoundingBox.min.set(-0.25f, 0, -0.25f);
@@ -118,7 +102,7 @@ public class SaturnEntity extends Entity {
 
         Threads.runOnMainThread(
                 () -> this.model = GameSingletons.entityModelLoader
-                        .load(this, "model_saturn.json", "saturn.animation.json", "animation.saturn.idle", "saturn.png")
+                        .load(this, "model_pathfinder.json", "pathfinder.animation.json", "animation.pathfinder.idle", "pathfinder.png")
         );
 
         currentAnimation = "idle";
@@ -131,7 +115,7 @@ public class SaturnEntity extends Entity {
                 Field rotationField = myClass.getField("rotation");
                 rotationField.set(bodyBone, rotation);
             } catch (Exception e) {
-                SaturnMod.LOGGER.error(e.getMessage());
+                PathfindingMod.LOGGER.error(e.getMessage());
             }
         }
     }
@@ -189,20 +173,22 @@ public class SaturnEntity extends Entity {
 
             waypoints.add(new Waypoint(worldPosition, tile.jump));
 
-            Block block = Block.STONE_BASALT;
-            if (i == 1)
-                block = Block.GRASS;
-            else if (i == route.size() - 1)
-                block = Block.SAND;
-            else if (tile.jump)
-                block = Block.CRATE_WOOD;
+            if (CommandStart.spawnWaypointItems) {
+                Block block = Block.STONE_BASALT;
+                if (i == 1)
+                    block = Block.GRASS;
+                else if (i == route.size() - 1)
+                    block = Block.SAND;
+                else if (tile.jump)
+                    block = Block.CRATE_WOOD;
 
-            ItemStack itemStack = new ItemStack(block.getDefaultBlockState().getItem(), 1);
+                ItemStack itemStack = new ItemStack(block.getDefaultBlockState().getItem(), 1);
 
-            ItemEntity itemEntity = new ItemEntity(itemStack);
-            itemEntity.setPosition(worldPosition);
-            itemEntity.minPickupAge = 5.0F;
-            zone.addEntity(itemEntity);
+                ItemEntity itemEntity = new ItemEntity(itemStack);
+                itemEntity.setPosition(worldPosition);
+                itemEntity.minPickupAge = 5.0F;
+                zone.addEntity(itemEntity);
+            }
         }
     }
 
@@ -216,8 +202,6 @@ public class SaturnEntity extends Entity {
 
         headRotationY = 0;
         headRotationX = 90;
-
-        //bodyRotationY = 0;
 
         if (CommandStart.positionInQueue) {
             CommandStart.positionInQueue = false;
@@ -259,7 +243,7 @@ public class SaturnEntity extends Entity {
                 move(1);
             else
                 stopMoving();
-            playAnimation("follow");
+            playAnimation("walk");
 
             Vector3 checkPosition = new Vector3(position);
             float distance = checkPosition.dst(currentPosition);
@@ -296,26 +280,6 @@ public class SaturnEntity extends Entity {
         return (float)angleDegrees;
     }
 
-    public static float[] lookAt(float x1, float y1, float z1, float x2, float y2, float z2) {
-        // Calculate the difference vector
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-        double dz = z2 - z1;
-
-        // Compute the yaw (rotation around the y-axis)
-        double yawRadians = Math.atan2(dz, dx);
-
-        // Compute the pitch (rotation around the x-axis)
-        double distance = Math.sqrt(dx * dx + dz * dz);
-        double pitchRadians = Math.atan2(dy, distance);
-
-        // Convert the angles to degrees
-        double yawDegrees = Math.toDegrees(yawRadians);
-        double pitchDegrees = Math.toDegrees(pitchRadians);
-
-        return new float[] {(float)yawDegrees, (float)pitchDegrees};
-    }
-
     public Vector3 convertToDirectionVector(float yawDegrees, float pitchDegrees) {
         double yawRadians = Math.toRadians(yawDegrees);
         double pitchRadians = Math.toRadians(pitchDegrees);
@@ -328,52 +292,5 @@ public class SaturnEntity extends Entity {
         double magnitude = Math.sqrt(x * x + y * y + z * z);
 
         return new Vector3((float)(x / magnitude), (float)(y / magnitude), (float)(z / magnitude));
-    }
-
-    public Player getClosestPlayerToEntity(Zone zone) {
-        Player closest = null;
-        float closestDistance = Float.MAX_VALUE;
-
-        float range = ((EntityGetSightRange)this).getSightRange();
-        for (int i = 0; i < zone.players.size; ++i) {
-            Player player = zone.players.get(i);
-            Entity entity = player.getEntity();
-
-            if (entity != null) {
-                float distance = position.dst(entity.position);
-                if (distance < closestDistance) {
-                    closest = player;
-                    closestDistance = distance;
-                }
-            }
-        }
-
-        return closest;
-    }
-
-    static {
-        for (int i = 0; i < yearnSounds.length; ++i)
-            yearnSounds[i] = GameAssetLoader.getSound("assets/sounds/entities/saturn/yearn/" + (i + 1) + ".ogg");
-
-        yearnMessages[0] = "I need log.";
-        yearnMessages[1] = "May I have a log?";
-        yearnMessages[2] = "Log please!";
-        yearnMessages[3] = "Please give me log!";
-        yearnMessages[4] = "One log please!";
-        yearnMessages[5] = "Give me log now!";
-        yearnMessages[6] = "I am in need of a log.";
-        yearnMessages[7] = "Give me log.";
-
-        for (int i = 0; i < thankSounds.length; ++i)
-            thankSounds[i] = GameAssetLoader.getSound("assets/sounds/entities/saturn/thank/" + (i + 1) + ".ogg");
-
-        thankMessages[0] = "Thank you.";
-        thankMessages[1] = "Thank you so much!";
-        thankMessages[2] = "I am so thankful!";
-        thankMessages[3] = "I needed that.";
-        thankMessages[4] = "I am really grateful.";
-        thankMessages[5] = "Yay!";
-        thankMessages[6] = "Thank you for the log.";
-        thankMessages[7] = "Thank you kind sir.";
     }
 }

@@ -1,7 +1,7 @@
-package com.sdftdusername.saturn.pathfinding;
+package com.sdftdusername.pathfinding.pathfinding;
 
-import com.sdftdusername.saturn.SaturnMod;
-import com.sdftdusername.saturn.Vector3i;
+import com.sdftdusername.pathfinding.PathfindingMod;
+import com.sdftdusername.pathfinding.Vector3i;
 import finalforeach.cosmicreach.world.Chunk;
 import finalforeach.cosmicreach.world.Zone;
 
@@ -39,7 +39,7 @@ public class Pathfinding {
                 TileMap map = new TileMap(chunk);
                 tileMaps.put(tileMapPos, map);
 
-                SaturnMod.LOGGER.info("Generated new TileMap at ({}, {}, {})", tileMapPos.x, tileMapPos.y, tileMapPos.z);
+                PathfindingMod.LOGGER.info("Generated new TileMap at ({}, {}, {})", tileMapPos.x, tileMapPos.y, tileMapPos.z);
 
                 return map;
             }

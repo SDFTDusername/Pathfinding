@@ -1,14 +1,13 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "com.sdftdusername.saturn.mixins",
+  "package": "com.sdftdusername.pathfinding.mixins",
   "compatibilityLevel": "JAVA_17",
   "mixins": [],
   "client": [
     "EntityGetSightRange",
     "CommandGetFields",
-    "EntityModelInstanceGetBoneMap",
-    "ItemEntityGetItemStack"
+    "EntityModelInstanceGetBoneMap"
   ],
   "injectors": {
     "defaultRequire": 1

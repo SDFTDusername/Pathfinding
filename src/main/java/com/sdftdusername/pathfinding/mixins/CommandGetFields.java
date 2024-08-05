@@ -1,8 +1,7 @@
-package com.sdftdusername.saturn.mixins;
+package com.sdftdusername.pathfinding.mixins;
 
 import finalforeach.cosmicreach.chat.commands.Command;
 import finalforeach.cosmicreach.entities.Player;
-import finalforeach.cosmicreach.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
@@ -10,7 +9,4 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface CommandGetFields {
     @Accessor(value = "player")
     Player getPlayer();
-
-    @Accessor(value = "world")
-    World getWorld();
 }

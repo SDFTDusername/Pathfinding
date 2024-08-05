@@ -10,9 +10,10 @@
 
     "metadata": {
       "name": "${mod_name}",
-      "description": "Adds a new entity to the game.",
+      "description": "Adds an entity with pathfinding to Cosmic Reach.",
       "contributors": {
-        "SDFTDusername": "Programmer"
+        "SDFTDusername": "Programmer",
+        "Qualia91": "Code for A* search algorithm"
       },
 
       "contact": {
@@ -21,11 +22,11 @@
         "sources": "https://codeberg.org/CRModders/cosmic-quilt-example/"
       },
 
-      "icon": "assets/saturn/icon.png"
+      "icon": "assets/pathfinding/icon.png"
     },
 
     "entrypoints": {
-      "init": "com.sdftdusername.saturn.SaturnMod"
+      "init": "com.sdftdusername.pathfinding.PathfindingMod"
     },
 
     "depends": [
@@ -40,5 +41,5 @@
     ]
   },
 
-  "mixin": "example_mod.mixins.json"
+  "mixin": "pathfinding.mixins.json"
 }

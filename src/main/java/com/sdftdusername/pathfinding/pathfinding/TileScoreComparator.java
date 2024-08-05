@@ -1,4 +1,4 @@
-package com.sdftdusername.saturn.pathfinding;
+package com.sdftdusername.pathfinding.pathfinding;
 
 import java.util.Comparator;
 

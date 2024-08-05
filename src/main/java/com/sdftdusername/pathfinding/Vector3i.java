@@ -1,4 +1,4 @@
-package com.sdftdusername.saturn;
+package com.sdftdusername.pathfinding;
 
 import com.badlogic.gdx.math.Vector3;
 
