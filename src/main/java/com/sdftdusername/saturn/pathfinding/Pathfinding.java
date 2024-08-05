@@ -1,30 +1,89 @@
 package com.sdftdusername.saturn.pathfinding;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.PriorityQueue;
+import com.sdftdusername.saturn.SaturnMod;
+import com.sdftdusername.saturn.Vector3i;
+import finalforeach.cosmicreach.world.Chunk;
+import finalforeach.cosmicreach.world.Zone;
+
+import java.util.*;
 
 public class Pathfinding {
-    private Tile[][][] tiles;
+    public static final int MAX_CHUNK_SEARCH_WIDTH = 32;
+    public static final int MAX_CHUNK_SEARCH_HEIGHT = 32;
+    public static final int MAX_CHUNK_SEARCH_LENGTH = 32;
+
     private Tile currentTile;
-    private int[] endPosition;
-    private int maxWidth;
-    private int maxHeight;
-    private int maxLength;
+    private Vector3i endPosition;
+
+    private Map<Vector3i, TileMap> tileMaps = new HashMap<>();
+    private Vector3i originTileMapPos = new Vector3i();
 
     private final TileScoreComparator tileScoreComparator = new TileScoreComparator();
 
-    public List<Tile> getRoute(Tile[][][] tiles, int[] startPosition, int[] endPosition) {
-        this.tiles = tiles;
-        this.maxWidth = tiles.length;
-        this.maxHeight = tiles[0].length;
-        this.maxLength = tiles[0][0].length;
+    public TileMap getTileMap(Zone zone, Vector3i tileMapPos) {
+        if (tileMaps.containsKey(tileMapPos))
+            return tileMaps.get(tileMapPos);
+
+        Vector3i relativeTileMapPos = tileMapPos.subtract(originTileMapPos);
+
+        if (
+            relativeTileMapPos.x >= Math.floor(-MAX_CHUNK_SEARCH_WIDTH / 2f) &&
+            relativeTileMapPos.x <= Math.ceil(MAX_CHUNK_SEARCH_WIDTH / 2f) &&
+            relativeTileMapPos.y >= Math.floor(-MAX_CHUNK_SEARCH_HEIGHT / 2f) &&
+            relativeTileMapPos.y <= Math.ceil(MAX_CHUNK_SEARCH_HEIGHT / 2f) &&
+            relativeTileMapPos.z >= Math.floor(-MAX_CHUNK_SEARCH_LENGTH / 2f) &&
+            relativeTileMapPos.z <= Math.ceil(MAX_CHUNK_SEARCH_LENGTH / 2f)) {
+
+            Chunk chunk = zone.getChunkAtChunkCoords(tileMapPos.x, tileMapPos.y, tileMapPos.z);
+            if (chunk != null) {
+                TileMap map = new TileMap(chunk);
+                tileMaps.put(tileMapPos, map);
+
+                SaturnMod.LOGGER.info("Generated new TileMap at ({}, {}, {})", tileMapPos.x, tileMapPos.y, tileMapPos.z);
+
+                return map;
+            }
+        }
+
+        return null;
+    }
+
+    public Vector3i tileMapPosFromBlockPos(Vector3i blockPos) {
+        return new Vector3i(
+                Math.floorDiv(blockPos.x, 16),
+                Math.floorDiv(blockPos.y, 16),
+                Math.floorDiv(blockPos.z, 16)
+        );
+    }
+
+    public Tile getTile(Zone zone, Vector3i position) {
+        Vector3i tileMapPos = tileMapPosFromBlockPos(position);
+        TileMap tileMap = getTileMap(zone, tileMapPos);
+
+        if (tileMap == null)
+            return null;
+
+        Vector3i localPos = new Vector3i(
+                Math.floorMod(position.x, 16),
+                Math.floorMod(position.y, 16),
+                Math.floorMod(position.z, 16)
+        );
+
+        //SaturnMod.LOGGER.info("tile map pos: {}, {}, {}", tileMapPos.x, tileMapPos.y, tileMapPos.z);
+        //SaturnMod.LOGGER.info("position: {}, {}, {}", position.x, position.y, position.z);
+        //SaturnMod.LOGGER.info("local pos: {}, {}, {}", localPos.x, localPos.y, localPos.z);
+
+        return tileMap.tiles[localPos.x][localPos.y][localPos.z];
+    }
+
+    public List<Tile> getRoute(Zone zone, Vector3i startPosition, Vector3i endPosition) {
         this.endPosition = endPosition;
 
-        resetAllTiles();
+        tileMaps.clear();
+        originTileMapPos = tileMapPosFromBlockPos(startPosition);
 
         PriorityQueue<Tile> queue = new PriorityQueue<>(tileScoreComparator);
-        queue.add(tiles[startPosition[0]][startPosition[1]][startPosition[2]]);
+        queue.add(getTile(zone, startPosition));
 
         boolean routeAvailable = false;
 
@@ -41,7 +100,7 @@ public class Pathfinding {
             int currentZ = currentTile.z;
             int currentScore = currentTile.score;
 
-            if (currentTile.x == endPosition[0] && currentTile.y == endPosition[1] && currentTile.z == endPosition[2]) {
+            if (currentTile.x == endPosition.x && currentTile.y == endPosition.y && currentTile.z == endPosition.z) {
                 // at the end, return path
                 routeAvailable = true;
                 break;
@@ -51,16 +110,16 @@ public class Pathfinding {
             int smallestScore = 9999999;
             for (int x = -1; x <= 1; x+=2) {
                 int nextX = currentX + x;
-                if (validTile(nextX, currentY, currentZ)) {
-                    int score = getScoreOfTile(tiles[nextX][currentY][currentZ], currentScore);
+                if (validTile(zone, nextX, currentY, currentZ)) {
+                    Tile tile = getTile(zone, new Vector3i(nextX, currentY, currentZ));
+                    int score = getScoreOfTile(tile, currentScore);
                     if (score < smallestScore) {
                         smallestScore = score;
                     }
-                    Tile thisTile = tiles[nextX][currentY][currentZ];
-                    thisTile.score = score;
-                    thisTile.jump = false;
-                    queue.add(thisTile);
-                    thisTile.parent = currentTile;
+                    tile.score = score;
+                    tile.jump = false;
+                    queue.add(tile);
+                    tile.parent = currentTile;
                 }
             }
 
@@ -74,16 +133,16 @@ public class Pathfinding {
                         int nextX = currentX + x;
                         int nextY = currentY + y;
                         int nextZ = currentZ + z;
-                        if (validTile(nextX, nextY, nextZ)) {
-                            int score = getScoreOfTile(tiles[nextX][nextY][nextZ], currentScore);
+                        if (validTile(zone, nextX, nextY, nextZ)) {
+                            Tile tile = getTile(zone, new Vector3i(nextX, nextY, nextZ));
+                            int score = getScoreOfTile(tile, currentScore);
                             if (score < smallestScore) {
                                 smallestScore = score;
                             }
-                            Tile thisTile = tiles[nextX][nextY][nextZ];
-                            thisTile.score = score;
-                            thisTile.jump = y == 1;
-                            queue.add(thisTile);
-                            thisTile.parent = currentTile;
+                            tile.score = score;
+                            tile.jump = y == 1;
+                            queue.add(tile);
+                            tile.parent = currentTile;
                         }
                     }
                 }
@@ -91,16 +150,16 @@ public class Pathfinding {
 
             for (int z = -1; z <= 1; z+=2) {
                 int nextZ = currentZ + z;
-                if (validTile(currentX, currentY, nextZ)) {
-                    int score = getScoreOfTile(tiles[currentX][currentY][nextZ], currentScore);
+                if (validTile(zone, currentX, currentY, nextZ)) {
+                    Tile tile = getTile(zone, new Vector3i(currentX, currentY, nextZ));
+                    int score = getScoreOfTile(tile, currentScore);
                     if (score < smallestScore) {
                         smallestScore = score;
                     }
-                    Tile thisTile = tiles[currentX][currentY][nextZ];
-                    thisTile.score = score;
-                    thisTile.jump = false;
-                    queue.add(thisTile);
-                    thisTile.parent = currentTile;
+                    tile.score = score;
+                    tile.jump = false;
+                    queue.add(tile);
+                    tile.parent = currentTile;
                 }
             }
         }
@@ -109,19 +168,6 @@ public class Pathfinding {
         // returns reverse list btw
         if (routeAvailable) return getPath(currentTile);
         return new ArrayList<>();
-    }
-
-    private void resetAllTiles() {
-        for (Tile[][] tiles2 : tiles) {
-            for (Tile[] tile : tiles2) {
-                for (int col = 0; col < tiles[0].length; ++col) {
-                    tile[col].open = true;
-                    tile[col].jump = false;
-                    tile[col].parent = null;
-                    tile[col].score = 0;
-                }
-            }
-        }
     }
 
     private List<Tile> getPath(Tile currentTile) {
@@ -136,7 +182,7 @@ public class Pathfinding {
     }
 
     private int distanceScoreAway(Tile currentTile) {
-        return Math.abs(endPosition[0] - currentTile.x) + Math.abs(endPosition[1] - currentTile.y) + Math.abs(endPosition[2] - currentTile.z);
+        return Math.abs(endPosition.x - currentTile.x) + Math.abs(endPosition.y - currentTile.y) + Math.abs(endPosition.z - currentTile.z);
     }
 
     private int getScoreOfTile(Tile tile, int currentScore) {
@@ -150,21 +196,13 @@ public class Pathfinding {
         return guessScoreLeft + movementScore + extraMovementCost;
     }
 
-    private boolean validTile(int nextX, int nextY, int nextZ) {
-        if (nextX >= 0 && nextX < maxWidth)
-            if (nextY >= 0 && nextY < maxHeight)
-                if (nextZ >= 0 && nextZ < maxLength) {
-                    Tile nextTile = tiles[nextX][nextY][nextZ];
-                    boolean bottom = true;
-                    int bottomY = nextY - 1;
-                    if (bottomY >= 0 && bottomY < maxHeight) {
-                        Tile bottomTile = tiles[nextX][bottomY][nextZ];
-                        if (bottomTile.walkThrough)
-                            bottom = false;
-                    }
-                    return bottom && nextTile.open && nextTile.walkThrough;
-                }
+    private boolean validTile(Zone zone, int nextX, int nextY, int nextZ) {
+        Tile nextTile = getTile(zone, new Vector3i(nextX, nextY, nextZ));
+        Tile bottomTile = getTile(zone, new Vector3i(nextX, nextY - 1, nextZ));
+        Tile topTile = getTile(zone, new Vector3i(nextX, nextY + 1, nextZ));
 
-        return false;
+        return bottomTile != null && !bottomTile.walkThrough &&
+                topTile != null && topTile.walkThrough &&
+                nextTile != null && nextTile.open && nextTile.walkThrough;
     }
 }

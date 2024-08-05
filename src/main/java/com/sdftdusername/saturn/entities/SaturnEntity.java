@@ -1,8 +1,9 @@
 package com.sdftdusername.saturn.entities;
 
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.sdftdusername.saturn.SaturnMod;
-import com.sdftdusername.saturn.Utils;
+import com.sdftdusername.saturn.Vector3i;
 import com.sdftdusername.saturn.commands.CommandStart;
 import com.sdftdusername.saturn.mixins.EntityGetSightRange;
 import com.sdftdusername.saturn.mixins.EntityModelInstanceGetBoneMap;
@@ -22,7 +23,6 @@ import finalforeach.cosmicreach.items.ItemStack;
 import finalforeach.cosmicreach.rendering.entities.EntityModel;
 import finalforeach.cosmicreach.rendering.entities.EntityModelInstance;
 import finalforeach.cosmicreach.savelib.crbin.CRBSerialized;
-import finalforeach.cosmicreach.world.Chunk;
 import finalforeach.cosmicreach.world.Zone;
 
 import java.lang.reflect.Field;
@@ -110,7 +110,7 @@ public class SaturnEntity extends Entity {
         canDespawn = false;
 
         localBoundingBox.min.set(-0.25f, 0, -0.25f);
-        localBoundingBox.max.set(0.25f,  2, 0.25f);
+        localBoundingBox.max.set(0.25f,  1.9f, 0.25f);
         localBoundingBox.update();
         getBoundingBox(this.globalBoundingBox);
 
@@ -168,45 +168,8 @@ public class SaturnEntity extends Entity {
     }
 
     public void startPathfinding(Zone zone, Vector3 goal) {
-        Vector3 startBlock = new Vector3(position);
-        startBlock.x = (float)Math.floor(startBlock.x);
-        startBlock.y = (float)Math.floor(startBlock.y);
-        startBlock.z = (float)Math.floor(startBlock.z);
-
-        Vector3 goalBlock = new Vector3(goal);
-        goalBlock.x = (float)Math.floor(goalBlock.x);
-        goalBlock.y = (float)Math.floor(goalBlock.y);
-        goalBlock.z = (float)Math.floor(goalBlock.z);
-
-        Chunk startChunk = zone.getChunkAtPosition(startBlock);
-        Chunk goalChunk = zone.getChunkAtPosition(goalBlock);
-
-        boolean sameChunk = startChunk.chunkX == goalChunk.chunkX &&
-                startChunk.chunkY == goalChunk.chunkY &&
-                startChunk.chunkZ == goalChunk.chunkZ;
-
-        if (!sameChunk) {
-            sendMessage(zone, "Start and goal position isn't in the same chunk");
-            return;
-        }
-
-        Vector3 localStartBlock = new Vector3(startBlock);
-        localStartBlock.x = Math.floorMod((int)localStartBlock.x, 16);
-        localStartBlock.y = Math.floorMod((int)localStartBlock.y, 16);
-        localStartBlock.z = Math.floorMod((int)localStartBlock.z, 16);
-
-        Vector3 localGoalBlock = new Vector3(goalBlock);
-        localGoalBlock.x = Math.floorMod((int)localGoalBlock.x, 16);
-        localGoalBlock.y = Math.floorMod((int)localGoalBlock.y, 16);
-        localGoalBlock.z = Math.floorMod((int)localGoalBlock.z, 16);
-
-        Tile[][][] map = Utils.mapFromChunk(startChunk);
-
-        int[] startPos = new int[] {(int)localStartBlock.x, (int)localStartBlock.y, (int)localStartBlock.z};
-        int[] endPos = new int[] {(int)localGoalBlock.x, (int)localGoalBlock.y, (int)localGoalBlock.z};
-
         Pathfinding pathfinding = new Pathfinding();
-        List<Tile> route = pathfinding.getRoute(map, startPos, endPos);
+        List<Tile> route = pathfinding.getRoute(zone, new Vector3i(position), new Vector3i(goal));
         sendMessage(zone, "Computing route...");
 
         if (route.isEmpty()) {
@@ -219,9 +182,9 @@ public class SaturnEntity extends Entity {
         for (int i = 1; i < route.size(); ++i) {
             Tile tile = route.get(route.size() - i - 1);
             Vector3 worldPosition = new Vector3(
-                    tile.x + startChunk.getBlockX() + 0.5f,
-                    tile.y + startChunk.getBlockY(),
-                    tile.z + startChunk.getBlockZ() + 0.5f
+                    tile.x + 0.5f,
+                    tile.y,
+                    tile.z + 0.5f
             );
 
             waypoints.add(new Waypoint(worldPosition, tile.jump));
@@ -288,12 +251,19 @@ public class SaturnEntity extends Entity {
                 velocity.add(0, 10, 0);
             }
 
-            move(1);
+            Vector2 checkPosition2D = new Vector2(position.x, position.z);
+            Vector2 currentPosition2D = new Vector2(currentPosition.x, currentPosition.z);
+            float distance2D = checkPosition2D.dst(currentPosition2D);
+
+            if (distance2D > 0.1f)
+                move(1);
+            else
+                stopMoving();
             playAnimation("follow");
 
             Vector3 checkPosition = new Vector3(position);
-
             float distance = checkPosition.dst(currentPosition);
+
             if (distance < 0.25f) {
                 waypoints.remove(0);
                 if (waypoints.isEmpty())

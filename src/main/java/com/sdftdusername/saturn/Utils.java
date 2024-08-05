@@ -3,6 +3,7 @@ package com.sdftdusername.saturn;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.sdftdusername.saturn.pathfinding.Tile;
+import com.sdftdusername.saturn.pathfinding.TileMap;
 import finalforeach.cosmicreach.blocks.BlockState;
 import finalforeach.cosmicreach.world.Chunk;
 import finalforeach.cosmicreach.world.Zone;
@@ -26,20 +27,5 @@ public class Utils {
         }
 
         return null;
-    }
-
-    public static Tile[][][] mapFromChunk(Chunk chunk) {
-        Tile[][][] map = new Tile[16][16][16];
-
-        for (int x = 0; x < 16; ++x) {
-            for (int y = 0; y < 16; ++y) {
-                for (int z = 0; z < 16; ++z) {
-                    BlockState blockState = chunk.getBlockState(x, y, z);
-                    map[x][y][z] = new Tile(blockState.walkThrough, x, y, z);
-                }
-            }
-        }
-
-        return map;
     }
 }
