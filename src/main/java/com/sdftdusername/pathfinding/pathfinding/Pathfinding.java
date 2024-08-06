@@ -101,17 +101,20 @@ public class Pathfinding {
             int smallestScore = 9999999;
             for (int x = -1; x <= 1; x+=2) {
                 int nextX = currentX + x;
+
                 Tile tile = getTile(zone, nextX, currentY, currentZ);
                 if (validTile(zone, tile)) {
                     tile.jump = false;
                     tile.fall = false;
+
                     int score = getScoreOfTile(tile, currentScore);
                     if (score < smallestScore) {
                         smallestScore = score;
                     }
+
                     tile.score = score;
-                    queue.add(tile);
                     tile.parent = currentTile;
+                    queue.add(tile);
                 }
             }
 
@@ -120,22 +123,27 @@ public class Pathfinding {
                     for (int z = -1; z <= 1; ++z) {
                         if (x == 0 && z == 0)
                             continue;
+
                         if (Math.abs(x) == Math.abs(z))
                             continue;
+
                         int nextX = currentX + x;
                         int nextY = currentY + y;
                         int nextZ = currentZ + z;
+
                         Tile tile = getTile(zone, nextX, nextY, nextZ);
                         if (validTile(zone, tile)) {
                             tile.jump = y == 1;
                             tile.fall = y == -1;
+
                             int score = getScoreOfTile(tile, currentScore);
                             if (score < smallestScore) {
                                 smallestScore = score;
                             }
+
                             tile.score = score;
-                            queue.add(tile);
                             tile.parent = currentTile;
+                            queue.add(tile);
                         }
                     }
                 }
@@ -143,17 +151,20 @@ public class Pathfinding {
 
             for (int z = -1; z <= 1; z+=2) {
                 int nextZ = currentZ + z;
+
                 Tile tile = getTile(zone, currentX, currentY, nextZ);
                 if (validTile(zone, tile)) {
                     tile.jump = false;
                     tile.fall = false;
+
                     int score = getScoreOfTile(tile, currentScore);
                     if (score < smallestScore) {
                         smallestScore = score;
                     }
+
                     tile.score = score;
-                    queue.add(tile);
                     tile.parent = currentTile;
+                    queue.add(tile);
                 }
             }
 
