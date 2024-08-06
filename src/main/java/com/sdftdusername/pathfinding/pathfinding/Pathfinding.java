@@ -133,17 +133,26 @@ public class Pathfinding {
 
                         Tile tile = getTile(zone, nextX, nextY, nextZ);
                         if (validTile(zone, tile)) {
-                            tile.jump = y == 1;
-                            tile.fall = y == -1;
+                            Tile ceilingTile = null;
+                            
+                            if (y == 1)
+                                ceilingTile = getTile(zone, currentX, currentY + 2, currentZ);
+                            else if (y == -1)
+                                ceilingTile = getTile(zone, nextX, currentY + 1, nextZ);
+                            
+                            if (ceilingTile != null && ceilingTile.walkThrough) {
+                                tile.jump = y == 1;
+                                tile.fall = y == -1;
 
-                            int score = getScoreOfTile(tile, currentScore);
-                            if (score < smallestScore) {
-                                smallestScore = score;
+                                int score = getScoreOfTile(tile, currentScore);
+                                if (score < smallestScore) {
+                                    smallestScore = score;
+                                }
+
+                                tile.score = score;
+                                tile.parent = currentTile;
+                                queue.add(tile);
                             }
-
-                            tile.score = score;
-                            tile.parent = currentTile;
-                            queue.add(tile);
                         }
                     }
                 }
