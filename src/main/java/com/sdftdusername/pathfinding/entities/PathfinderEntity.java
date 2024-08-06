@@ -226,6 +226,7 @@ public class PathfinderEntity extends Entity {
 
     public void stopFollow() {
         pathfindingThread.interrupt();
+        waypoints.clear();
     }
 
     @Override
@@ -240,17 +241,20 @@ public class PathfinderEntity extends Entity {
         headRotationX = 90;
 
         if (CommandStop.stop) {
+            boolean stopped = false;
+
             if (busy) {
-                sendMessage(zone, "Stopping pathfinding");
                 pathfindingThread.interrupt();
+                stopped = true;
             } else if (!waypoints.isEmpty()) {
-                sendMessage(zone, "Stopping pathfinding");
                 waypoints.clear();
-            } else {
+                stopped = true;
+            } else
                 sendMessage(zone, "Nothing to stop");
-            }
 
             CommandStop.stop = false;
+            if (stopped)
+                sendMessage(zone, "Stopping pathfinding");
         }
 
         if (CommandStart.positionInQueue) {
