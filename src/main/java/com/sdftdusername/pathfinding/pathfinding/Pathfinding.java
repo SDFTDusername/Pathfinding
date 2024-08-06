@@ -108,9 +108,8 @@ public class Pathfinding {
                     tile.fall = false;
 
                     int score = getScoreOfTile(tile, currentScore);
-                    if (score < smallestScore) {
+                    if (score < smallestScore)
                         smallestScore = score;
-                    }
 
                     tile.score = score;
                     tile.parent = currentTile;
@@ -145,9 +144,8 @@ public class Pathfinding {
                                 tile.fall = y == -1;
 
                                 int score = getScoreOfTile(tile, currentScore);
-                                if (score < smallestScore) {
+                                if (score < smallestScore)
                                     smallestScore = score;
-                                }
 
                                 tile.score = score;
                                 tile.parent = currentTile;
@@ -167,9 +165,8 @@ public class Pathfinding {
                     tile.fall = false;
 
                     int score = getScoreOfTile(tile, currentScore);
-                    if (score < smallestScore) {
+                    if (score < smallestScore)
                         smallestScore = score;
-                    }
 
                     tile.score = score;
                     tile.parent = currentTile;
@@ -182,8 +179,6 @@ public class Pathfinding {
             }
         }
 
-        // get List of tiles using current tile
-        // returns reverse list btw
         if (routeAvailable) return getPath(currentTile);
         return new ArrayList<>();
     }
