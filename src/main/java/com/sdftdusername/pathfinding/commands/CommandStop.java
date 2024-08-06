@@ -1,20 +1,26 @@
 package com.sdftdusername.pathfinding.commands;
 
-import finalforeach.cosmicreach.chat.Chat;
-import finalforeach.cosmicreach.chat.commands.Command;
+import com.sdftdusername.pathfinding.advanced_command.AdvancedCommand;
+import com.sdftdusername.pathfinding.advanced_command.Argument;
 
-public class CommandStop extends Command {
+import java.util.Map;
+
+public class CommandStop extends AdvancedCommand {
     public static boolean stop = false;
 
     @Override
-    public void run(Chat chat, String[] args) {
-        super.run(chat, args);
-
+    public void run(Map<String, String> args) {
+        super.run(args);
         stop = true;
     }
 
     @Override
-    public String getDescription() {
-        return "Stop the pathfinding";
+    public Argument[] getArguments() {
+        return new Argument[0];
+    }
+
+    @Override
+    public String getCommandDescription() {
+        return "Stops pathfinding";
     }
 }

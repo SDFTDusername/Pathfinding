@@ -1,22 +1,25 @@
-package com.sdftdusername.pathfinding.commands;
+package com.sdftdusername.pathfinding.advanced_command;
 
 import com.sdftdusername.pathfinding.mixins.CommandGetFields;
 import finalforeach.cosmicreach.chat.Chat;
 import finalforeach.cosmicreach.chat.commands.Command;
 import finalforeach.cosmicreach.entities.Player;
 import finalforeach.cosmicreach.world.World;
+import finalforeach.cosmicreach.world.Zone;
 
 import java.util.*;
 
 public abstract class AdvancedCommand extends Command {
     public World world;
     public Player player;
+    public Zone zone;
     public Chat chat;
 
     @Override
     public void run(Chat chat, String[] args) {
         world = getWorld();
         player = getPlayer();
+        zone = player.getZone(world);
         this.chat = chat;
 
         Argument[] arguments = getArguments();
@@ -101,10 +104,7 @@ public abstract class AdvancedCommand extends Command {
     }
 
     public void run(Map<String, String> args) {
-        for (String key : args.keySet()) {
-            String value = args.get(key);
-            sendMessage(key + ": " + value);
-        }
+
     }
 
     public boolean valueToBoolean(String value) {
@@ -122,8 +122,6 @@ public abstract class AdvancedCommand extends Command {
     public abstract Argument[] getArguments();
 
     public abstract String getCommandDescription();
-
-    public abstract String getCommandName();
 
     public void sendMessage(String message) {
         chat.sendMessage(world, player, null, message);
@@ -147,9 +145,9 @@ public abstract class AdvancedCommand extends Command {
         Argument[] arguments = getArguments();
 
         if (arguments.length == 0)
-            description.append(" No arguments.");
+            description.append(". No arguments");
         else
-            description.append(" Arguments: ");
+            description.append(". Arguments: ");
 
         for (Argument argument : arguments)
             description.append(" ").append(argument.toString());

@@ -1,11 +1,14 @@
 package com.sdftdusername.pathfinding.commands;
 
 import com.badlogic.gdx.math.Vector3;
+import com.sdftdusername.pathfinding.advanced_command.AdvancedCommand;
+import com.sdftdusername.pathfinding.advanced_command.Argument;
+import com.sdftdusername.pathfinding.advanced_command.ArgumentDataType;
 import com.sdftdusername.pathfinding.mixins.CommandGetFields;
-import finalforeach.cosmicreach.chat.Chat;
-import finalforeach.cosmicreach.chat.commands.Command;
 
-public class CommandStart extends Command {
+import java.util.Map;
+
+public class CommandStart extends AdvancedCommand {
     public static Vector3 queuePosition = Vector3.Zero;
     public static boolean positionInQueue = false;
     public static boolean busy = false;
@@ -14,30 +17,31 @@ public class CommandStart extends Command {
     public static boolean moveToWaypoints = false;
 
     @Override
-    public void run(Chat chat, String[] args) {
-        super.run(chat, args);
+    public void run(Map<String, String> args) {
+        super.run(args);
 
         if (busy) {
             commandError("Pathfinding already started");
             return;
         }
 
-        if (args.length >= 2)
-            spawnWaypointItems = args[1].equalsIgnoreCase("true");
-        else
-            spawnWaypointItems = false;
-
-        if (args.length >= 3)
-            moveToWaypoints = args[2].equalsIgnoreCase("true");
-        else
-            moveToWaypoints = true;
+        spawnWaypointItems = valueToBoolean(args.get("spawnWaypointItems"));
+        moveToWaypoints = valueToBoolean(args.get("moveToWaypoints"));
 
         queuePosition = ((CommandGetFields)this).getPlayer().getEntity().position;
         positionInQueue = true;
     }
 
     @Override
-    public String getDescription() {
-        return "Start the pathfinding";
+    public Argument[] getArguments() {
+        return new Argument[] {
+            new Argument("spawnWaypointItems", "swi", ArgumentDataType.BOOLEAN, "0"),
+            new Argument("moveToWaypoints", "mtw", ArgumentDataType.BOOLEAN, "1")
+        };
+    }
+
+    @Override
+    public String getCommandDescription() {
+        return "Starts pathfinding";
     }
 }
