@@ -10,7 +10,7 @@
 
     "metadata": {
       "name": "${mod_name}",
-      "description": "Adds an entity with pathfinding to Cosmic Reach.",
+      "description": "Adds an entity with pathfinding.",
       "contributors": {
         "SDFTDusername": "Programmer",
         "Qualia91": "Code for A* search algorithm"
