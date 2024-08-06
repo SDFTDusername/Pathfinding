@@ -111,6 +111,14 @@ public abstract class AdvancedCommand extends Command {
         return value.equalsIgnoreCase("true") || value.equalsIgnoreCase("1");
     }
 
+    public double valueToNumber(String value, double defaultValue) {
+        try {
+            return Double.parseDouble(value);
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
     public abstract Argument[] getArguments();
 
     public abstract String getCommandDescription();
