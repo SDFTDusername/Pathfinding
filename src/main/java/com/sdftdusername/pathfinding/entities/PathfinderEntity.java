@@ -166,6 +166,9 @@ public class PathfinderEntity extends Entity {
 
             sendMessage(zone, "Found a route!");
 
+            if (CommandStart.moveToWaypoints)
+                waypoints.clear();
+
             for (int i = 1; i < route.size(); ++i) {
                 Tile tile = route.get(route.size() - i - 1);
                 Vector3 worldPosition = new Vector3(
