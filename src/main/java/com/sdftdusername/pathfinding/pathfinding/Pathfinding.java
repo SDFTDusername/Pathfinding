@@ -105,12 +105,13 @@ public class Pathfinding {
                 int nextX = currentX + x;
                 if (validTile(zone, nextX, currentY, currentZ)) {
                     Tile tile = getTile(zone, new Vector3i(nextX, currentY, currentZ));
+                    tile.jump = false;
+                    tile.fall = false;
                     int score = getScoreOfTile(tile, currentScore);
                     if (score < smallestScore) {
                         smallestScore = score;
                     }
                     tile.score = score;
-                    tile.jump = false;
                     queue.add(tile);
                     tile.parent = currentTile;
                 }
@@ -128,12 +129,13 @@ public class Pathfinding {
                         int nextZ = currentZ + z;
                         if (validTile(zone, nextX, nextY, nextZ)) {
                             Tile tile = getTile(zone, new Vector3i(nextX, nextY, nextZ));
+                            tile.jump = y == 1;
+                            tile.fall = y == -1;
                             int score = getScoreOfTile(tile, currentScore);
                             if (score < smallestScore) {
                                 smallestScore = score;
                             }
                             tile.score = score;
-                            tile.jump = y == 1;
                             queue.add(tile);
                             tile.parent = currentTile;
                         }
@@ -145,12 +147,13 @@ public class Pathfinding {
                 int nextZ = currentZ + z;
                 if (validTile(zone, currentX, currentY, nextZ)) {
                     Tile tile = getTile(zone, new Vector3i(currentX, currentY, nextZ));
+                    tile.jump = false;
+                    tile.fall = false;
                     int score = getScoreOfTile(tile, currentScore);
                     if (score < smallestScore) {
                         smallestScore = score;
                     }
                     tile.score = score;
-                    tile.jump = false;
                     queue.add(tile);
                     tile.parent = currentTile;
                 }
@@ -184,10 +187,19 @@ public class Pathfinding {
 
     private int getScoreOfTile(Tile tile, int currentScore) {
         int guessScoreLeft = distanceScoreAway(tile);
-
         int extraMovementCost = 0;
+
         if (tile.walkThrough)
-            extraMovementCost = 1000;
+            extraMovementCost += 1000;
+
+        if (tile.fall)
+            extraMovementCost += 2000;
+
+        if (tile.inFluid)
+            extraMovementCost += 2000;
+
+        if (tile.jump)
+            extraMovementCost += 3000;
 
         int movementScore = currentScore + 1;
         return guessScoreLeft + movementScore + extraMovementCost;

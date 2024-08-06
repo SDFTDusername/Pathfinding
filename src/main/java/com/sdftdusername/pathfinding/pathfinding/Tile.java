@@ -9,6 +9,8 @@ public class Tile {
     public boolean open;
     public boolean walkThrough;
     public boolean jump;
+    public boolean fall;
+    public boolean inFluid;
 
     public Tile(boolean walkThrough, int x, int y, int z) {
         this.x = x;
@@ -19,6 +21,8 @@ public class Tile {
         open = walkThrough;
         this.walkThrough = walkThrough;
         jump = false;
+        fall = false;
+        inFluid = false;
     }
 
     public Tile(Tile tile) {
@@ -30,6 +34,8 @@ public class Tile {
         open = true;
         walkThrough = true;
         jump = false;
+        fall = false;
+        inFluid = false;
     }
 
     @Override
