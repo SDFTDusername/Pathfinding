@@ -7,7 +7,7 @@ import finalforeach.cosmicreach.world.Zone;
 import java.util.*;
 
 public class Pathfinding {
-    public static final int MAX_CHUNK_SEARCH_WIDTH = 32;
+    public static final int MAX_CHUNK_SEARCH_WIDTH  = 32;
     public static final int MAX_CHUNK_SEARCH_HEIGHT = 32;
     public static final int MAX_CHUNK_SEARCH_LENGTH = 32;
 
@@ -15,7 +15,7 @@ public class Pathfinding {
     private Vector3i endPosition;
 
     private Map<Vector3i, TileMap> tileMaps = new HashMap<>();
-    private Vector3i originTileMapPos = new Vector3i();
+    private Vector3i originTileMapPos;
 
     private final TileScoreComparator tileScoreComparator = new TileScoreComparator();
 
@@ -45,38 +45,36 @@ public class Pathfinding {
         return null;
     }
 
-    public Vector3i tileMapPosFromBlockPos(Vector3i blockPos) {
+    public Vector3i tileMapPosFromBlockPos(int x, int y, int z) {
         return new Vector3i(
-                Math.floorDiv(blockPos.x, 16),
-                Math.floorDiv(blockPos.y, 16),
-                Math.floorDiv(blockPos.z, 16)
+                Math.floorDiv(x, 16),
+                Math.floorDiv(y, 16),
+                Math.floorDiv(z, 16)
         );
     }
 
-    public Tile getTile(Zone zone, Vector3i position) {
-        Vector3i tileMapPos = tileMapPosFromBlockPos(position);
+    public Tile getTile(Zone zone, int x, int y, int z) {
+        Vector3i tileMapPos = tileMapPosFromBlockPos(x, y, z);
         TileMap tileMap = getTileMap(zone, tileMapPos);
 
         if (tileMap == null)
             return null;
 
-        Vector3i localPos = new Vector3i(
-                Math.floorMod(position.x, 16),
-                Math.floorMod(position.y, 16),
-                Math.floorMod(position.z, 16)
-        );
+        int localX = Math.floorMod(x, 16);
+        int localY = Math.floorMod(y, 16);
+        int localZ = Math.floorMod(z, 16);
 
-        return tileMap.tiles[localPos.x][localPos.y][localPos.z];
+        return tileMap.tiles[localX][localY][localZ];
     }
 
     public List<Tile> getRoute(Zone zone, Vector3i startPosition, Vector3i endPosition) {
         this.endPosition = endPosition;
 
         tileMaps.clear();
-        originTileMapPos = tileMapPosFromBlockPos(startPosition);
+        originTileMapPos = tileMapPosFromBlockPos(startPosition.x, startPosition.y, startPosition.z);
 
         PriorityQueue<Tile> queue = new PriorityQueue<>(tileScoreComparator);
-        queue.add(getTile(zone, startPosition));
+        queue.add(getTile(zone, startPosition.x, startPosition.y, startPosition.z));
 
         boolean routeAvailable = false;
 
@@ -93,7 +91,7 @@ public class Pathfinding {
             int currentZ = currentTile.z;
             int currentScore = currentTile.score;
 
-            if (currentTile.x == endPosition.x && currentTile.y == endPosition.y && currentTile.z == endPosition.z) {
+            if (currentX == endPosition.x && currentY == endPosition.y && currentZ == endPosition.z) {
                 // at the end, return path
                 routeAvailable = true;
                 break;
@@ -103,8 +101,8 @@ public class Pathfinding {
             int smallestScore = 9999999;
             for (int x = -1; x <= 1; x+=2) {
                 int nextX = currentX + x;
-                if (validTile(zone, nextX, currentY, currentZ)) {
-                    Tile tile = getTile(zone, new Vector3i(nextX, currentY, currentZ));
+                Tile tile = getTile(zone, nextX, currentY, currentZ);
+                if (validTile(zone, tile)) {
                     tile.jump = false;
                     tile.fall = false;
                     int score = getScoreOfTile(tile, currentScore);
@@ -127,8 +125,8 @@ public class Pathfinding {
                         int nextX = currentX + x;
                         int nextY = currentY + y;
                         int nextZ = currentZ + z;
-                        if (validTile(zone, nextX, nextY, nextZ)) {
-                            Tile tile = getTile(zone, new Vector3i(nextX, nextY, nextZ));
+                        Tile tile = getTile(zone, nextX, nextY, nextZ);
+                        if (validTile(zone, tile)) {
                             tile.jump = y == 1;
                             tile.fall = y == -1;
                             int score = getScoreOfTile(tile, currentScore);
@@ -145,8 +143,8 @@ public class Pathfinding {
 
             for (int z = -1; z <= 1; z+=2) {
                 int nextZ = currentZ + z;
-                if (validTile(zone, currentX, currentY, nextZ)) {
-                    Tile tile = getTile(zone, new Vector3i(currentX, currentY, nextZ));
+                Tile tile = getTile(zone, currentX, currentY, nextZ);
+                if (validTile(zone, tile)) {
                     tile.jump = false;
                     tile.fall = false;
                     int score = getScoreOfTile(tile, currentScore);
@@ -182,36 +180,31 @@ public class Pathfinding {
     }
 
     private int distanceScoreAway(Tile currentTile) {
-        return Math.abs(endPosition.x - currentTile.x) + Math.abs(endPosition.y - currentTile.y) + Math.abs(endPosition.z - currentTile.z);
+        return  Math.abs(endPosition.x - currentTile.x) +
+                Math.abs(endPosition.y - currentTile.y) +
+                Math.abs(endPosition.z - currentTile.z);
     }
 
     private int getScoreOfTile(Tile tile, int currentScore) {
         int guessScoreLeft = distanceScoreAway(tile);
-        int extraMovementCost = 0;
 
-        if (tile.walkThrough)
-            extraMovementCost += 1000;
+        int extraMovementCost = 1;
+        if (tile.fall)    extraMovementCost += 5;
+        if (tile.inFluid) extraMovementCost += 10;
+        if (tile.jump)    extraMovementCost += 20;
 
-        if (tile.fall)
-            extraMovementCost += 2000;
-
-        if (tile.inFluid)
-            extraMovementCost += 2000;
-
-        if (tile.jump)
-            extraMovementCost += 3000;
-
-        int movementScore = currentScore + 1;
-        return guessScoreLeft + movementScore + extraMovementCost;
+        return guessScoreLeft + currentScore + extraMovementCost;
     }
 
-    private boolean validTile(Zone zone, int nextX, int nextY, int nextZ) {
-        Tile nextTile = getTile(zone, new Vector3i(nextX, nextY, nextZ));
-        Tile bottomTile = getTile(zone, new Vector3i(nextX, nextY - 1, nextZ));
-        Tile topTile = getTile(zone, new Vector3i(nextX, nextY + 1, nextZ));
+    private boolean validTile(Zone zone, Tile tile) {
+        if (tile == null)
+            return false;
 
-        return bottomTile != null && !bottomTile.walkThrough &&
-                topTile != null && topTile.walkThrough &&
-                nextTile != null && nextTile.open && nextTile.walkThrough;
+        Tile topTile    = getTile(zone, tile.x, tile.y + 1, tile.z);
+        Tile bottomTile = getTile(zone, tile.x, tile.y - 1, tile.z);
+
+        return  topTile    != null &&  topTile.walkThrough &&
+                bottomTile != null && !bottomTile.walkThrough &&
+                                       tile.walkThrough && tile.open;
     }
 }
