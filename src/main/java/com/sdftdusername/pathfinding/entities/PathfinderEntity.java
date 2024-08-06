@@ -44,6 +44,7 @@ public class PathfinderEntity extends Entity {
 
     public boolean isFollowing = false;
     public Vector3 targetPosition;
+    public double updateFollowTime = 0;
 
     @CRBSerialized
     public float targetRotationY = 0;
@@ -156,16 +157,18 @@ public class PathfinderEntity extends Entity {
     }
 
     public void startPathfinding(Zone zone, Vector3 goal, boolean follow) {
+        if (!follow)
+            sendMessage(zone, "Computing route...");
+
+        long start = System.currentTimeMillis();
         Pathfinding pathfinding = new Pathfinding();
         List<Tile> route = pathfinding.getRoute(zone, new Vector3i(position), new Vector3i(goal));
+        long end = System.currentTimeMillis();
 
         if (Thread.currentThread().isInterrupted()) {
             if (!follow)
                 sendMessage(zone, "Pathfinding has stopped");
         } else {
-            if (!follow)
-                sendMessage(zone, "Computing route...");
-
             if (route.isEmpty()) {
                 if (!follow)
                     sendMessage(zone, "Route is empty");
@@ -173,8 +176,10 @@ public class PathfinderEntity extends Entity {
                 return;
             }
 
-            if (!follow)
-                sendMessage(zone, "Found a route!");
+            if (!follow) {
+                long duration = end - start;
+                sendMessage(zone, "Found a route! Took " + duration + "ms (" + (duration / 1000f) + "s)");
+            }
 
             if (follow || CommandStart.moveToWaypoints)
                 waypoints.clear();
@@ -274,13 +279,27 @@ public class PathfinderEntity extends Entity {
 
         if (CommandFollow.follow) {
             if (!isFollowing) {
+                updateFollowTime = 1;
                 isFollowing = true;
+
                 targetPosition = new Vector3(CommandFollow.target.getPosition());
                 updateFollow(zone);
+
                 sendMessage(zone, "Started following");
             } else {
+                updateFollowTime -= deltaTime;
+                boolean updateTarget = false;
+
                 Vector3 newTargetPosition = CommandFollow.target.getPosition();
-                if (targetPosition.dst(newTargetPosition) > 1f) {
+                if (targetPosition.dst(newTargetPosition) > 1f)
+                    updateTarget = true;
+
+                if (updateFollowTime <= 0 && targetPosition.equals(newTargetPosition))
+                    updateTarget = true;
+
+                if (updateTarget) {
+                    updateFollowTime = 1;
+
                     targetPosition = new Vector3(newTargetPosition);
                     updateFollow(zone);
                 }
