@@ -14,7 +14,7 @@ public class Pathfinding {
     private Tile currentTile;
     private Vector3i endPosition;
 
-    private Map<Vector3i, TileMap> tileMaps = new HashMap<>();
+    private final Map<Vector3i, TileMap> tileMaps = new HashMap<>();
     private Vector3i originTileMapPos;
 
     private final TileScoreComparator tileScoreComparator = new TileScoreComparator();

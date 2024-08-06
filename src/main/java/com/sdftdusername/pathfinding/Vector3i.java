@@ -16,7 +16,7 @@ public class Vector3i {
     public static final Vector3i UP = new Vector3i(0, 1, 0);
     public static final Vector3i FORWARD = new Vector3i(0, 0, 1);
 
-    private int hashCode;
+    private final int hashCode;
 
     public Vector3i() {
         x = 0;

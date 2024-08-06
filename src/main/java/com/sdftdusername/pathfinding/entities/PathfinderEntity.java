@@ -34,7 +34,7 @@ public class PathfinderEntity extends Entity {
     public static final String ENTITY_TYPE_ID = "base:entity_pathfinder";
     public static final float SPEED = 3f;
 
-    public String currentAnimation = "";
+    public String currentAnimation;
     public Object bodyBone = null;
 
     public Thread pathfindingThread;
@@ -116,7 +116,7 @@ public class PathfinderEntity extends Entity {
     public void setBodyRotation(Vector3 rotation) {
         if (bodyBone != null) {
             try {
-                Class myClass = bodyBone.getClass();
+                Class<?> myClass = bodyBone.getClass();
                 Field rotationField = myClass.getField("rotation");
                 rotationField.set(bodyBone, rotation);
             } catch (Exception e) {
@@ -219,14 +219,12 @@ public class PathfinderEntity extends Entity {
         if (pathfindingThread != null && pathfindingThread.isAlive())
             pathfindingThread.interrupt();
 
-        pathfindingThread = new Thread(() -> {
-            startPathfinding(zone, targetPosition, true);
-        });
+        pathfindingThread = new Thread(() -> startPathfinding(zone, targetPosition, true));
 
         pathfindingThread.start();
     }
 
-    public void stopFollow(Zone zone) {
+    public void stopFollow() {
         pathfindingThread.interrupt();
     }
 
@@ -274,7 +272,7 @@ public class PathfinderEntity extends Entity {
             CommandFollow.follow = false;
             CommandStopFollow.stop = false;
             sendMessage(zone, "Stopped following");
-            stopFollow(zone);
+            stopFollow();
         }
 
         if (CommandFollow.follow) {
