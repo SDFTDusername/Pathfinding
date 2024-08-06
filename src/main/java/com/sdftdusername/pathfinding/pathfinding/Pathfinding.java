@@ -66,10 +66,6 @@ public class Pathfinding {
                 Math.floorMod(position.z, 16)
         );
 
-        //SaturnMod.LOGGER.info("tile map pos: {}, {}, {}", tileMapPos.x, tileMapPos.y, tileMapPos.z);
-        //SaturnMod.LOGGER.info("position: {}, {}, {}", position.x, position.y, position.z);
-        //SaturnMod.LOGGER.info("local pos: {}, {}, {}", localPos.x, localPos.y, localPos.z);
-
         return tileMap.tiles[localPos.x][localPos.y][localPos.z];
     }
 
