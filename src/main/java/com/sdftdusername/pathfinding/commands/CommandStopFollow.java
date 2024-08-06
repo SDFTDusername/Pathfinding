@@ -5,15 +5,25 @@ import com.sdftdusername.pathfinding.advanced_command.Argument;
 
 import java.util.Map;
 
-public class CommandStop extends AdvancedCommand {
+public class CommandStopFollow extends AdvancedCommand {
     public static boolean stop = false;
 
     @Override
     public void run(Map<String, String> args) {
         super.run(args);
 
-        if (CommandFollow.follow || CommandStopFollow.stop) {
-            sendError("The pathfinder is following");
+        if (CommandStart.busy) {
+            sendError("Pathfinding is busy");
+            return;
+        }
+
+        if (stop) {
+            sendMessage("The pathfinder is already stopping");
+            return;
+        }
+
+        if (!CommandFollow.follow) {
+            sendError("The pathfinder is not following yet");
             return;
         }
 
@@ -27,6 +37,6 @@ public class CommandStop extends AdvancedCommand {
 
     @Override
     public String getCommandDescription() {
-        return "Stops pathfinding";
+        return "Stops the pathfinder from following";
     }
 }

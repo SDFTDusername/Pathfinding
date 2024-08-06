@@ -20,8 +20,13 @@ public class CommandStart extends AdvancedCommand {
     public void run(Map<String, String> args) {
         super.run(args);
 
+        if (CommandFollow.follow || CommandStopFollow.stop) {
+            sendError("The pathfinder is already following");
+            return;
+        }
+
         if (busy) {
-            commandError("Pathfinding already started");
+            sendError("Pathfinding already started");
             return;
         }
 

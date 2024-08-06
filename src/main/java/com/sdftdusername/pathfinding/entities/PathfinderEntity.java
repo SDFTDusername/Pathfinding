@@ -4,8 +4,10 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.sdftdusername.pathfinding.PathfindingMod;
 import com.sdftdusername.pathfinding.Vector3i;
+import com.sdftdusername.pathfinding.commands.CommandFollow;
 import com.sdftdusername.pathfinding.commands.CommandStart;
 import com.sdftdusername.pathfinding.commands.CommandStop;
+import com.sdftdusername.pathfinding.commands.CommandStopFollow;
 import com.sdftdusername.pathfinding.mixins.EntityModelInstanceGetBoneMap;
 import com.sdftdusername.pathfinding.pathfinding.Pathfinding;
 import com.sdftdusername.pathfinding.pathfinding.Tile;
@@ -39,6 +41,9 @@ public class PathfinderEntity extends Entity {
 
     public List<Waypoint> waypoints = new ArrayList<>();
     public boolean busy = false;
+
+    public boolean isFollowing = false;
+    public Vector3 targetPosition;
 
     @CRBSerialized
     public float targetRotationY = 0;
@@ -150,23 +155,28 @@ public class PathfinderEntity extends Entity {
         return (a + diff * t + 360) % 360;
     }
 
-    public void startPathfinding(Zone zone, Vector3 goal) {
+    public void startPathfinding(Zone zone, Vector3 goal, boolean follow) {
         Pathfinding pathfinding = new Pathfinding();
         List<Tile> route = pathfinding.getRoute(zone, new Vector3i(position), new Vector3i(goal));
 
-        if (Thread.currentThread().isInterrupted())
-            sendMessage(zone, "Pathfinding has stopped");
-        else {
-            sendMessage(zone, "Computing route...");
+        if (Thread.currentThread().isInterrupted()) {
+            if (!follow)
+                sendMessage(zone, "Pathfinding has stopped");
+        } else {
+            if (!follow)
+                sendMessage(zone, "Computing route...");
 
             if (route.isEmpty()) {
-                sendMessage(zone, "Route is empty");
+                if (!follow)
+                    sendMessage(zone, "Route is empty");
+
                 return;
             }
 
-            sendMessage(zone, "Found a route!");
+            if (!follow)
+                sendMessage(zone, "Found a route!");
 
-            if (CommandStart.moveToWaypoints)
+            if (follow || CommandStart.moveToWaypoints)
                 waypoints.clear();
 
             for (int i = 1; i < route.size(); ++i) {
@@ -177,10 +187,10 @@ public class PathfinderEntity extends Entity {
                         tile.z + 0.5f
                 );
 
-                if (CommandStart.moveToWaypoints)
+                if (follow || CommandStart.moveToWaypoints)
                     waypoints.add(new Waypoint(worldPosition, tile.jump));
 
-                if (CommandStart.spawnWaypointItems) {
+                if (!follow && CommandStart.spawnWaypointItems) {
                     Block block = Block.STONE_BASALT;
                     if (i == 1)
                         block = Block.GRASS;
@@ -198,6 +208,21 @@ public class PathfinderEntity extends Entity {
                 }
             }
         }
+    }
+
+    public void updateFollow(Zone zone) {
+        if (pathfindingThread != null && pathfindingThread.isAlive())
+            pathfindingThread.interrupt();
+
+        pathfindingThread = new Thread(() -> {
+            startPathfinding(zone, targetPosition, true);
+        });
+
+        pathfindingThread.start();
+    }
+
+    public void stopFollow(Zone zone) {
+        pathfindingThread.interrupt();
     }
 
     @Override
@@ -231,7 +256,7 @@ public class PathfinderEntity extends Entity {
             busy = true;
 
             pathfindingThread = new Thread(() -> {
-                startPathfinding(zone, CommandStart.queuePosition);
+                startPathfinding(zone, CommandStart.queuePosition, false);
                 CommandStart.busy = false;
                 busy = false;
             });
@@ -240,17 +265,37 @@ public class PathfinderEntity extends Entity {
             pathfindingThread.start();
         }
 
-        if (!waypoints.isEmpty() && !busy) {
+        if (CommandStopFollow.stop) {
+            CommandFollow.follow = false;
+            CommandStopFollow.stop = false;
+            sendMessage(zone, "Stopped following");
+            stopFollow(zone);
+        }
+
+        if (CommandFollow.follow) {
+            if (!isFollowing) {
+                isFollowing = true;
+                targetPosition = new Vector3(CommandFollow.target.getPosition());
+                updateFollow(zone);
+                sendMessage(zone, "Started following");
+            } else {
+                Vector3 newTargetPosition = CommandFollow.target.getPosition();
+                if (targetPosition.dst(newTargetPosition) > 1f) {
+                    targetPosition = new Vector3(newTargetPosition);
+                    updateFollow(zone);
+                }
+            }
+        }
+
+        if (!waypoints.isEmpty() && (!busy || isFollowing)) {
             Waypoint waypoint = waypoints.get(0);
 
             Vector3 currentPosition = waypoint.position;
             targetRotationY = -lookAt(position.x, position.z, currentPosition.x, currentPosition.z) + 90;
 
-            if (waypoints.size() > 1) {
-                Vector3 nextPosition = waypoints.get(1).position;
-                float nextTargetRotationY = -lookAt(position.x, position.z, nextPosition.x, nextPosition.z) + 90;
-                bodyRotationY = lerpRotation(bodyRotationY, nextTargetRotationY, (float)deltaTime * 5f);
-            }
+            Vector3 nextPosition = waypoints.get((waypoints.size() > 1) ? 1 : 0).position;
+            float nextTargetRotationY = -lookAt(position.x, position.z, nextPosition.x, nextPosition.z) + 90;
+            bodyRotationY = lerpRotation(bodyRotationY, nextTargetRotationY, (float)deltaTime * 5f);
 
             if (waypoint.jump && isOnGround) {
                 isOnGround = false;
@@ -272,7 +317,7 @@ public class PathfinderEntity extends Entity {
 
             if (distance < 0.25f) {
                 waypoints.remove(0);
-                if (waypoints.isEmpty())
+                if (!isFollowing && waypoints.isEmpty())
                     sendMessage(zone, "Done!");
             }
         } else {

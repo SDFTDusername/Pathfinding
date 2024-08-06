@@ -1,8 +1,6 @@
 package com.sdftdusername.pathfinding;
 
-import com.sdftdusername.pathfinding.commands.CommandSpawn;
-import com.sdftdusername.pathfinding.commands.CommandStart;
-import com.sdftdusername.pathfinding.commands.CommandStop;
+import com.sdftdusername.pathfinding.commands.*;
 import finalforeach.cosmicreach.chat.commands.Command;
 
 public class CommandsMod {
@@ -11,5 +9,7 @@ public class CommandsMod {
         Command.registerCommand("start", CommandStart::new);
         Command.registerCommand("stop", CommandStop::new);
         Command.registerCommand("spawn", CommandSpawn::new);
+        Command.registerCommand("follow", CommandFollow::new);
+        Command.registerCommand("stopfollow", CommandStopFollow::new);
     }
 }
