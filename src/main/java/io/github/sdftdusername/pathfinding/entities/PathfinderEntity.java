@@ -28,7 +28,6 @@ import io.github.sdftdusername.pathfinding.pathfinding.Waypoint;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class PathfinderEntity extends Entity {
     public static final String ENTITY_TYPE_ID = "pathfinding:entity_pathfinder";
