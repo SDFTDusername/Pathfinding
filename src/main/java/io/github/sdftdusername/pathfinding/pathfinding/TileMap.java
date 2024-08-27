@@ -1,4 +1,4 @@
-package com.sdftdusername.pathfinding.pathfinding;
+package io.github.sdftdusername.pathfinding.pathfinding;
 
 import finalforeach.cosmicreach.blocks.Block;
 import finalforeach.cosmicreach.blocks.BlockState;

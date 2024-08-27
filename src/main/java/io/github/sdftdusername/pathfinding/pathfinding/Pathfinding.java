@@ -1,8 +1,8 @@
-package com.sdftdusername.pathfinding.pathfinding;
+package io.github.sdftdusername.pathfinding.pathfinding;
 
-import com.sdftdusername.pathfinding.Vector3i;
 import finalforeach.cosmicreach.world.Chunk;
 import finalforeach.cosmicreach.world.Zone;
+import io.github.sdftdusername.pathfinding.Vector3i;
 
 import java.util.*;
 

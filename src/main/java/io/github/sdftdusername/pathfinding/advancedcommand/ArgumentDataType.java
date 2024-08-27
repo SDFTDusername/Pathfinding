@@ -1,4 +1,4 @@
-package com.sdftdusername.pathfinding.advanced_command;
+package io.github.sdftdusername.pathfinding.advancedcommand;
 
 public enum ArgumentDataType {
     STRING,

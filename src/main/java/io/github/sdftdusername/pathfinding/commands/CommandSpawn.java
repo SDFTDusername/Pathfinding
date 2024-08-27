@@ -1,10 +1,10 @@
-package com.sdftdusername.pathfinding.commands;
+package io.github.sdftdusername.pathfinding.commands;
 
-import com.sdftdusername.pathfinding.advanced_command.AdvancedCommand;
-import com.sdftdusername.pathfinding.advanced_command.Argument;
-import com.sdftdusername.pathfinding.entities.PathfinderEntity;
 import finalforeach.cosmicreach.entities.Entity;
 import finalforeach.cosmicreach.entities.EntityCreator;
+import io.github.sdftdusername.pathfinding.advancedcommand.AdvancedCommand;
+import io.github.sdftdusername.pathfinding.advancedcommand.Argument;
+import io.github.sdftdusername.pathfinding.entities.PathfinderEntity;
 
 import java.util.Map;
 

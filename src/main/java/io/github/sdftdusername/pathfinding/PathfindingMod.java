@@ -1,4 +1,4 @@
-package com.sdftdusername.pathfinding;
+package io.github.sdftdusername.pathfinding;
 
 import dev.crmodders.cosmicquilt.api.entrypoint.ModInitializer;
 import org.quiltmc.loader.api.ModContainer;

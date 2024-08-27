@@ -1,4 +1,4 @@
-package com.sdftdusername.pathfinding;
+package io.github.sdftdusername.pathfinding;
 
 import com.badlogic.gdx.math.Vector3;
 

@@ -1,7 +1,7 @@
-package com.sdftdusername.pathfinding;
+package io.github.sdftdusername.pathfinding;
 
-import com.sdftdusername.pathfinding.entities.PathfinderEntity;
 import finalforeach.cosmicreach.entities.EntityCreator;
+import io.github.sdftdusername.pathfinding.entities.PathfinderEntity;
 
 public class EntitiesMod {
     public static void RegisterEntities() {

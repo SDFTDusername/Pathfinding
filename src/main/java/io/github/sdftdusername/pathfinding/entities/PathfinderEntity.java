@@ -1,41 +1,42 @@
-package com.sdftdusername.pathfinding.entities;
+package io.github.sdftdusername.pathfinding.entities;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.sdftdusername.pathfinding.PathfindingMod;
-import com.sdftdusername.pathfinding.Vector3i;
-import com.sdftdusername.pathfinding.commands.CommandFollow;
-import com.sdftdusername.pathfinding.commands.CommandStart;
-import com.sdftdusername.pathfinding.commands.CommandStop;
-import com.sdftdusername.pathfinding.commands.CommandStopFollow;
-import com.sdftdusername.pathfinding.mixins.EntityModelInstanceGetBoneMap;
-import com.sdftdusername.pathfinding.pathfinding.Pathfinding;
-import com.sdftdusername.pathfinding.pathfinding.Tile;
-import com.sdftdusername.pathfinding.pathfinding.Waypoint;
+import com.badlogic.gdx.utils.ObjectMap;
 import finalforeach.cosmicreach.GameSingletons;
 import finalforeach.cosmicreach.Threads;
 import finalforeach.cosmicreach.blocks.Block;
 import finalforeach.cosmicreach.chat.Chat;
 import finalforeach.cosmicreach.entities.Entity;
 import finalforeach.cosmicreach.entities.ItemEntity;
-import finalforeach.cosmicreach.entities.Player;
+import finalforeach.cosmicreach.entities.player.Player;
 import finalforeach.cosmicreach.items.ItemStack;
-import finalforeach.cosmicreach.rendering.entities.EntityModel;
-import finalforeach.cosmicreach.rendering.entities.EntityModelInstance;
+import finalforeach.cosmicreach.rendering.entities.IEntityModel;
 import finalforeach.cosmicreach.savelib.crbin.CRBSerialized;
 import finalforeach.cosmicreach.world.Zone;
+import io.github.sdftdusername.pathfinding.PathfindingMod;
+import io.github.sdftdusername.pathfinding.Vector3i;
+import io.github.sdftdusername.pathfinding.commands.CommandFollow;
+import io.github.sdftdusername.pathfinding.commands.CommandStart;
+import io.github.sdftdusername.pathfinding.commands.CommandStop;
+import io.github.sdftdusername.pathfinding.commands.CommandStopFollow;
+import io.github.sdftdusername.pathfinding.mixins.EntityModelInstanceGetBoneMap;
+import io.github.sdftdusername.pathfinding.pathfinding.Pathfinding;
+import io.github.sdftdusername.pathfinding.pathfinding.Tile;
+import io.github.sdftdusername.pathfinding.pathfinding.Waypoint;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 public class PathfinderEntity extends Entity {
-    public static final String ENTITY_TYPE_ID = "base:entity_pathfinder";
+    public static final String ENTITY_TYPE_ID = "pathfinding:entity_pathfinder";
     public static final float SPEED = 3f;
 
     public String currentAnimation;
     public Object bodyBone = null;
+    public static IEntityModel model;
 
     public Thread pathfindingThread;
 
@@ -67,7 +68,7 @@ public class PathfinderEntity extends Entity {
             return;
         }
 
-        model.setCurrentAnimation(this, "animation.pathfinder." + name);
+        modelInstance.setCurrentAnimation("animation.pathfinder." + name);
         currentAnimation = name;
     }
 
@@ -106,8 +107,20 @@ public class PathfinderEntity extends Entity {
         viewPositionOffset = new Vector3(0, 1.75f, 0);
 
         Threads.runOnMainThread(
-                () -> this.model = GameSingletons.entityModelLoader
-                        .load(this, "model_pathfinder.json", "pathfinder.animation.json", "animation.pathfinder.idle", "pathfinder.png")
+                () -> {
+                    if (model == null) {
+                        model = GameSingletons.entityModelLoader
+                                .load(
+                                        this,
+                                        "model_pathfinder.json",
+                                        "pathfinder.animation.json",
+                                        "animation.pathfinder.idle",
+                                        "pathfinder.png"
+                                );
+                    }
+
+                    modelInstance = model.getNewModelInstance();
+                }
         );
 
         currentAnimation = "idle";
@@ -232,8 +245,7 @@ public class PathfinderEntity extends Entity {
     @Override
     public void update(Zone zone, double deltaTime) {
         if (bodyBone == null) {
-            EntityModelInstance entityModelInstance = ((EntityModel) model).getModelInstance(this);
-            HashMap boneMap = ((EntityModelInstanceGetBoneMap) entityModelInstance).getBoneMap();
+            ObjectMap<String, Object> boneMap = ((EntityModelInstanceGetBoneMap)modelInstance).getBoneMap();
             bodyBone = boneMap.get("body");
         }
 

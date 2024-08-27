@@ -1,8 +1,8 @@
-package com.sdftdusername.pathfinding.commands;
+package io.github.sdftdusername.pathfinding.commands;
 
-import com.sdftdusername.pathfinding.advanced_command.AdvancedCommand;
-import com.sdftdusername.pathfinding.advanced_command.Argument;
 import finalforeach.cosmicreach.entities.Entity;
+import io.github.sdftdusername.pathfinding.advancedcommand.AdvancedCommand;
+import io.github.sdftdusername.pathfinding.advancedcommand.Argument;
 
 import java.util.Map;
 

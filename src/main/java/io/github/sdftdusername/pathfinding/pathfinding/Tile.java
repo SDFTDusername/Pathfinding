@@ -1,4 +1,4 @@
-package com.sdftdusername.pathfinding.pathfinding;
+package io.github.sdftdusername.pathfinding.pathfinding;
 
 public class Tile {
     public final int x;

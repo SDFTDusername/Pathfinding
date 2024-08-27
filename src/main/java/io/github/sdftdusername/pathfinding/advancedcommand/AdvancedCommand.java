@@ -1,24 +1,20 @@
-package com.sdftdusername.pathfinding.advanced_command;
+package io.github.sdftdusername.pathfinding.advancedcommand;
 
-import com.sdftdusername.pathfinding.mixins.CommandGetFields;
 import finalforeach.cosmicreach.chat.Chat;
 import finalforeach.cosmicreach.chat.commands.Command;
-import finalforeach.cosmicreach.entities.Player;
-import finalforeach.cosmicreach.world.World;
 import finalforeach.cosmicreach.world.Zone;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public abstract class AdvancedCommand extends Command {
-    public World world;
-    public Player player;
     public Zone zone;
     public Chat chat;
 
     @Override
     public void run(Chat chat, String[] args) {
-        world = getWorld();
-        player = getPlayer();
         zone = player.getZone(world);
         this.chat = chat;
 
@@ -131,16 +127,8 @@ public abstract class AdvancedCommand extends Command {
         chat.sendMessage(world, player, null, "ERROR: " + message);
     }
 
-    private World getWorld() {
-        return ((CommandGetFields)this).getWorld();
-    }
-
-    private Player getPlayer() {
-        return ((CommandGetFields)this).getPlayer();
-    }
-
     @Override
-    public String getDescription() {
+    public String getShortDescription() {
         StringBuilder description = new StringBuilder(getCommandDescription());
         Argument[] arguments = getArguments();
 

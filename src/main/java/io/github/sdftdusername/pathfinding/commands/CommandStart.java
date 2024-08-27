@@ -1,10 +1,9 @@
-package com.sdftdusername.pathfinding.commands;
+package io.github.sdftdusername.pathfinding.commands;
 
 import com.badlogic.gdx.math.Vector3;
-import com.sdftdusername.pathfinding.advanced_command.AdvancedCommand;
-import com.sdftdusername.pathfinding.advanced_command.Argument;
-import com.sdftdusername.pathfinding.advanced_command.ArgumentDataType;
-import com.sdftdusername.pathfinding.mixins.CommandGetFields;
+import io.github.sdftdusername.pathfinding.advancedcommand.AdvancedCommand;
+import io.github.sdftdusername.pathfinding.advancedcommand.Argument;
+import io.github.sdftdusername.pathfinding.advancedcommand.ArgumentDataType;
 
 import java.util.Map;
 
@@ -33,7 +32,7 @@ public class CommandStart extends AdvancedCommand {
         spawnWaypointItems = valueToBoolean(args.get("spawnWaypointItems"));
         moveToWaypoints = valueToBoolean(args.get("moveToWaypoints"));
 
-        queuePosition = ((CommandGetFields)this).getPlayer().getEntity().position;
+        queuePosition = player.getEntity().position;
         positionInQueue = true;
     }
 
